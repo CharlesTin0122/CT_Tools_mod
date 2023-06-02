@@ -11,7 +11,7 @@
 
 # Built Visual Studio Code Extensions
 *.vsix
-
+*.pyc
 #----------------------------------------For Python-------------------------------------------
 
 # Byte-compiled / optimized / DLL files

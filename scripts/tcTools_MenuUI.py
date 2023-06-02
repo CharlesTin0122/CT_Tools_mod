@@ -8,7 +8,6 @@
 
 import os
 import sys
-
 import pymel.core as pm
 
 # 确定菜单分类，获取菜单文件夹所在的路径，获取菜单文件夹所在路径
@@ -75,7 +74,7 @@ def createMenu(*args):
                 '{}_mItem'.format(comm),
                 label=comm,
                 p='{}_mItem'.format(menuItem[0]),
-                c='import {0};reload({0})'.format(comm)
+                c='import {0};from importlib import reload;reload({0})'.format(comm)
             )
 
 
