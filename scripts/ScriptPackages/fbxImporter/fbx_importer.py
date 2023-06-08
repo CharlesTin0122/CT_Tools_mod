@@ -130,7 +130,7 @@ class AdvAnimToolsUI:
                 'FKWeaponAS_R', 'FKRingFinger3_R', 'FKRingFinger2_R', 'FKRingFinger1_R', 'FKWrist_R', 'FKElbow_R',
                 'FKShoulder_R', 'FKToes_R', 'FKAnkle_R', 'FKKnee_R', 'FKHip_R', 'FKToes_L', 'FKAnkle_L',
                 'FKKnee_L', 'FKHip_L', 'RootX_M', 'AimEye_L', 'AimEye_R', 'AimEye_M', 'FKNeck_M', 'HipSwinger_M',
-                'FKChest_M', 'FKSpine2_M', 'FKEye_R', 'FKJaw_M', 'FKHead_M', 'FKScapula_L', 'FKWeaponASB_R',
+                'FKChest_M', 'FKSpine2_M', 'FKEye_R', 'FKJaw_M', 'FKHead_M', 'FKScapula_L',
                 'FKScapula_R', 'FKEye_L', 'FKThumbFinger2_R', 'FKThumbFinger1_R', 'FKMiddleFinger3_R',
                 'FKMiddleFinger2_R', 'FKMiddleFinger1_R', 'FKThumbFinger1_L', 'FKMiddleFinger3_L', 'FKMiddleFinger2_L',
                 'FKMiddleFinger1_L', 'FKIndexFinger2_L', 'FKIndexFinger1_L', 'FKThumbFinger3_L', 'FKThumbFinger2_L',
