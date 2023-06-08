@@ -19,8 +19,11 @@ class PoseToolsUI:
         self.createUI()
 
     def createUI(self):
-        if pm.window('cpWindow', exists=1):
-            pm.deleteUI('cpWindow', window=True)
+        try:
+            pm.deleteUI('cpWindow')
+        except Exception as e:
+            print(e)
+
         with pm.window('cpWindow', menuBarVisible=True, title='CopyNPastPose') as win:
             with self.template:
                 with pm.columnLayout(rowSpacing=5, adj=1):
