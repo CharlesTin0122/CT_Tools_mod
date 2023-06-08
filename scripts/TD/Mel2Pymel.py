@@ -8,4 +8,4 @@
 from importlib import reload
 from mel2Py import mel2py
 reload(mel2py)
-mel2py.mel2py_ui()
+ct = mel2py.Mel2Pymel()
