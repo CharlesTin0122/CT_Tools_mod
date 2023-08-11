@@ -5,8 +5,7 @@
 # @Time     :  2023/5/26 13:22
 # @Software : PyCharm
 # Description:
-from importlib import reload
+
 from modelChecker import modelChecker_UI
-reload(modelChecker_UI)
 
 modelChecker_UI.UI.show_UI()
