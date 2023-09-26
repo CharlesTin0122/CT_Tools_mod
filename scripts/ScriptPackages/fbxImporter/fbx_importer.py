@@ -9,6 +9,7 @@
 '''
 import os
 import pymel.core as pm
+from mgear.core import pyFBX
 
 
 class AdvAnimToolsUI:
@@ -128,6 +129,13 @@ class AdvAnimToolsUI:
 
             for i in range(len(joint_sl)):
                 pm.parentConstraint(joint_sl[i], ctrl_sl[i], mo=True, skipTranslate=["x", "y", "z"])
+            # 通过使用fbxSDK移除fbx文件中的namespace
+            fbx_file = pyFBX.FBX_Class(fbxPath)
+            try:
+                fbx_file.remove_namespace()
+                fbx_file.save()
+            except Exception as e:
+                print(e)
 
             pm.importFile(fbxPath)
 
