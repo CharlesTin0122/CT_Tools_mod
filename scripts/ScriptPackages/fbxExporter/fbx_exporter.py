@@ -6,7 +6,6 @@
 # @Software : PyCharm
 # Description:
 import os
-
 import pymel.core as pm
 
 
@@ -90,17 +89,20 @@ class FbxExporterUI(object):
             bace_name = os.path.splitext(file_name)
             exp_name = str(bace_name[0]) + '.fbx'
             pm.openFile(f, force=True)
+            pm.bakeResults(
+                self.objList,
+                time=(pm.env.getMaxTime(), pm.env.getMinTime()),
+                simulation=True
+                )
             pm.select(self.objList)
-            pm.bakeResults(t=(pm.env.getMaxTime(), pm.env.getMinTime()), bol=True)
-            pm.select(self.objList)
-            pm.exportSelected(
+            pm.cmds.file(
                 os.path.join(self.exportPath, exp_name),
-                force=True, type='FBX export',
-                constructionHistory=False,
-                constraints=False,
-                expressions=False
-            )
-            pm.delete('BakeResultsContainer')
+                force=1,
+                options="v=0;",
+                typ="FBX export",
+                preserveReferences=True,
+                exportSelected=1
+                )
         pm.informBox(title='Export Complete', message='All selected objects have been exported successfully.')
 
 
