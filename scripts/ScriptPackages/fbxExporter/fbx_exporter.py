@@ -9,12 +9,13 @@ import os
 import pymel.core as pm
 
 
-class FbxExporterUI(object):
+class FbxExporterUI():
 
     def __init__(self):
         self.export_path_field = None
         self.fileList = []
         self.objList = []
+        self.jnt_attr = []
         self.exportPath = None
         self.window = None
         self.slyFile = None
@@ -61,6 +62,13 @@ class FbxExporterUI(object):
 
     def load_objects(self, *args):
         self.objList = pm.selected()
+        # 设定需要烘焙的骨骼和骨骼属性
+        attrs = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
+        # 要需要烘焙的每根骨骼的每个属性放入jnt_attr变量
+        for jnt in self.objList:
+            for attr in attrs:
+                self.jnt_attr.append(jnt.attr(attr))
+
         if not self.objList:
             pm.warning('No objects selected for export.')
             return
@@ -74,57 +82,52 @@ class FbxExporterUI(object):
             self.exportPath = export_path[0]
             pm.textField(self.export_path_field, e=True, text=self.exportPath)
 
+    def export_all(self, *args):
+        if not self.fileList:
+            pm.warning('No files selected for export.')
+            return
+        if not self.objList:
+            pm.warning('No objects selected for export.')
+            return
+        if not self.exportPath:
+            pm.warning('No export path selected.')
+            return
 
-def export_all(self, *args):
-    if not self.fileList:
-        pm.warning('No files selected for export.')
-        return
-    if not self.objList:
-        pm.warning('No objects selected for export.')
-        return
-    if not self.exportPath:
-        pm.warning('No export path selected.')
-        return
-
-    # 需要导出的每个文件地址
-    for f in self.fileList:
-        # 处理导出名称
-        file_name = os.path.basename(f)
-        bace_name = os.path.splitext(file_name)
-        exp_name = str(bace_name[0]) + '.fbx'
-        # 打开文件
-        pm.openFile(f, force=True)
-        # 设定需要烘焙的骨骼和骨骼属性
-        attrs = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
-        jnt_attr = []
-        # 要需要烘焙的每根骨骼的每个属性放入jnt_attr变量
-        for jnt in self.objList:
-            for attr in attrs:
-                jnt_attr.append(jnt.attr(attr))
-        # 烘焙动画
-        pm.bakeResults(
-            jnt_attr,
-            simulation=True,
-            shape=False,
-            sampleBy=1,
-            sparseAnimCurveBake=False,
-            bakeOnOverrideLayer=False,
-            removeBakedAnimFromLayer=True,
-            # resolveWithoutLayer=cmds.ls(type='animLayer'),
-            time=(pm.env.getMaxTime(), pm.env.getMinTime())
-            )
-        # 执行欧拉过滤器以防止动画曲线翻转
-        jnt_rotation = [jnt.r for jnt in self.objList]
-        pm.filterCurve(jnt_rotation, filter="euler")
-        # 选择骨架并导出
-        pm.select(self.objList)
-        pm.exportSelected(
-            os.path.join(self.exportPath, exp_name),
-            force=True,
-            type="FBX export"
-            )
-    # 弹出信息
-    pm.informBox(title='Export Complete', message='All selected objects have been exported successfully.')
+        # 需要导出的每个文件地址
+        for f in self.fileList:
+            # 处理导出名称
+            file_name = os.path.basename(f)
+            bace_name = os.path.splitext(file_name)
+            exp_name = str(bace_name[0]) + '.fbx'
+            # 打开文件
+            pm.openFile(f, force=True)
+            try:
+                # 烘焙动画
+                pm.bakeResults(
+                    self.jnt_attr,
+                    simulation=True,
+                    shape=False,
+                    sampleBy=1,
+                    sparseAnimCurveBake=False,
+                    bakeOnOverrideLayer=False,
+                    removeBakedAnimFromLayer=True,
+                    # resolveWithoutLayer=cmds.ls(type='animLayer'),
+                    time=(pm.env.getMaxTime(), pm.env.getMinTime())
+                    )
+            except Exception as exc:
+                print(exc)
+            # 执行欧拉过滤器以防止动画曲线翻转
+            jnt_rotation = [jnt.r for jnt in self.objList]
+            pm.filterCurve(jnt_rotation, filter="euler")
+            # 选择骨架并导出
+            pm.select(self.objList)
+            pm.exportSelected(
+                os.path.join(self.exportPath, exp_name),
+                force=True,
+                type="FBX export"
+                )
+        # 弹出信息
+        pm.informBox(title='Export Complete', message='All selected objects have been exported successfully.')
 
 
 if __name__ == '__main__':
