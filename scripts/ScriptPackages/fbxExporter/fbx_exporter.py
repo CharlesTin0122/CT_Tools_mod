@@ -63,7 +63,7 @@ class FbxExporterUI:
                 pm.text(label=os.path.basename(file))
 
     def load_objects(self, *args):
-        self.objList = pm.selected()
+        self.objList = [str(x) for x in pm.selected()]
         if not self.objList:
             pm.warning("No objects selected for export.")
             return
@@ -76,7 +76,7 @@ class FbxExporterUI:
         # 要需要烘焙的每根骨骼的每个属性放入everyBakeAttr变量
         for eachJoint in self.objList:
             for eachAttr in attrsToBake:
-                self.everyBakeAttr.append(eachJoint.attr(eachAttr))
+                self.everyBakeAttr.append(f"{eachJoint}.{eachAttr}")
 
     def select_export_path(self, *args):
         export_path = pm.fileDialog2(fileFilter="*folder", fileMode=2)
@@ -91,7 +91,9 @@ class FbxExporterUI:
             "everyBakeAttr": self.everyBakeAttr,
             "export_path": self.exportPath,
         }
-        with open("exp_data.json", "w") as d:
+        current_path = rf'{os.path.dirname(__file__)}'
+        json_file = os.path.join(current_path, "exp_data.json")
+        with open(json_file, "w") as d:
             json.dump(self.exp_data, d, indent=4)
 
     def export_all(self, *args):
@@ -106,7 +108,9 @@ class FbxExporterUI:
             return
 
         self.write_json()
-        with open("exp_data.json", "r") as r:
+        current_path = rf'{os.path.dirname(__file__)}'
+        json_file = os.path.join(current_path, "exp_data.json")
+        with open(json_file, "r") as r:
             exp_data = json.load(r)
 
         for f in exp_data["file_list"]:
@@ -131,7 +135,7 @@ class FbxExporterUI:
                 everyRotation = [jnt.r for jnt in exp_data["jnt_list"]]
                 pm.filterCurve(everyRotation, filter="euler")
             except Exception as exc:
-                pm.warning(exc)
+                print(exc)
 
             pm.select(exp_data["jnt_list"])
             pm.exportSelected(
@@ -140,11 +144,11 @@ class FbxExporterUI:
                 type="FBX export",
                 constraints=False,
                 expressions=False,
+                constructionHistory=False
             )
-        pm.informBox(
-            title="Export Complete",
-            message="All selected objects have been exported successfully.",
-        )
+        confirm = pm.confirmDialog(title='Finish', message="Done!", button=['OK', 'Open Folder'])
+        if confirm == 'Open Folder':
+            os.startfile(exp_data["export_path"])
 
 
 if __name__ == "__main__":
