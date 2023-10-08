@@ -38,7 +38,7 @@ for item in menuList:
         if filenames:
             itemlist = []
             for f in filenames:
-                if f.split('.')[0] not in itemlist:
+                if (f.split('.')[-1] == 'py') and (f.split('.')[0] not in itemlist):
                     itemlist.append(f.split('.')[0])
                 menuItemList.append([item, itemlist])
 

@@ -6,55 +6,57 @@
 # @Software : PyCharm
 # Description:
 import os
+import json
 import pymel.core as pm
 
 
-class FbxExporterUI():
-
+class FbxExporterUI:
     def __init__(self):
         self.export_path_field = None
         self.fileList = []
         self.objList = []
-        self.jnt_attr = []
+        self.everyBakeAttr = []
         self.exportPath = None
+        self.exp_data = {}
         self.window = None
         self.slyFile = None
         self.slyOBJ = None
 
     def show(self):
         try:
-            pm.deleteUI('fbxExport')
+            pm.deleteUI("fbxExport")
         except Exception as exc:
             print(exc)
 
-        self.window = pm.window('fbxExport', title='FBX Exporter')
+        self.window = pm.window("fbxExport", title="FBX Exporter")
         with pm.columnLayout(rowSpacing=5, adj=True):
-            with pm.frameLayout(label='Export multiple files'):
+            with pm.frameLayout(label="Export multiple files"):
                 with pm.columnLayout(adj=1):
-                    pm.button(label='Load All Export Files', c=self.load_files)
+                    pm.button(label="Load All Export Files", c=self.load_files)
                 with pm.scrollLayout(w=200, h=150, bgc=(0.5, 0.5, 0.5)) as self.slyFile:
-                    pm.text('File Name:')
+                    pm.text("File Name:")
                 with pm.columnLayout(adj=1):
-                    pm.button(label='Load Objects To Export', c=self.load_objects)
+                    pm.button(label="Load Objects To Export", c=self.load_objects)
                 with pm.scrollLayout(w=200, h=150, bgc=(0.5, 0.5, 0.5)) as self.slyOBJ:
-                    pm.text('OBJ Name:')
-                with pm.rowLayout(numberOfColumns=3,
-                                  columnWidth3=(55, 140, 5),
-                                  adjustableColumn=2,
-                                  columnAlign=(1, 'right'),
-                                  columnAttach=[(1, 'both', 0), (2, 'both', 0), (3, 'both', 0)]
-                                  ):
-                    pm.text(label='Export Path:', w=65)
+                    pm.text("OBJ Name:")
+                with pm.rowLayout(
+                    numberOfColumns=3,
+                    columnWidth3=(55, 140, 5),
+                    adjustableColumn=2,
+                    columnAlign=(1, "right"),
+                    columnAttach=[(1, "both", 0), (2, "both", 0), (3, "both", 0)],
+                ):
+                    pm.text(label="Export Path:", w=65)
                     self.export_path_field = pm.textField("ExporterTextField")
-                    pm.button(label='...', w=30, h=20, c=self.select_export_path)
+                    pm.button(label="...", w=30, h=20, c=self.select_export_path)
                 with pm.columnLayout(adj=1):
-                    pm.button(label='Export All !!!', c=self.export_all)
+                    pm.button(label="Export All !!!", c=self.export_all)
         self.window.show()
 
     def load_files(self, *args):
-        self.fileList = pm.fileDialog2(fileFilter='*mb', fileMode=4)
+        self.fileList = pm.fileDialog2(fileFilter="Maya Files (*.ma *.mb)", fileMode=4)
         if not self.fileList:
-            pm.warning('No files selected for export.')
+            pm.warning("No files selected for export.")
             return
         with self.slyFile:
             for file in self.fileList:
@@ -62,49 +64,60 @@ class FbxExporterUI():
 
     def load_objects(self, *args):
         self.objList = pm.selected()
-        # 设定需要烘焙的骨骼和骨骼属性
-        attrs = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
-        # 要需要烘焙的每根骨骼的每个属性放入jnt_attr变量
-        for jnt in self.objList:
-            for attr in attrs:
-                self.jnt_attr.append(jnt.attr(attr))
-
         if not self.objList:
-            pm.warning('No objects selected for export.')
+            pm.warning("No objects selected for export.")
             return
         with self.slyOBJ:
             for obj in self.objList:
                 pm.text(label=obj)
 
+        # 设定需要烘焙的动画属性。分别为位移，旋转，缩放
+        attrsToBake = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
+        # 要需要烘焙的每根骨骼的每个属性放入everyBakeAttr变量
+        for eachJoint in self.objList:
+            for eachAttr in attrsToBake:
+                self.everyBakeAttr.append(eachJoint.attr(eachAttr))
+
     def select_export_path(self, *args):
-        export_path = pm.fileDialog2(fileFilter='*folder', fileMode=2)
+        export_path = pm.fileDialog2(fileFilter="*folder", fileMode=2)
         if export_path:
             self.exportPath = export_path[0]
             pm.textField(self.export_path_field, e=True, text=self.exportPath)
 
+    def write_json(self, *args):
+        self.exp_data = {
+            "file_list": self.fileList,
+            "jnt_list": self.objList,
+            "everyBakeAttr": self.everyBakeAttr,
+            "export_path": self.exportPath,
+        }
+        with open("exp_data.json", "w") as d:
+            json.dump(self.exp_data, d, indent=4)
+
     def export_all(self, *args):
         if not self.fileList:
-            pm.warning('No files selected for export.')
+            pm.warning("No files selected for export.")
             return
         if not self.objList:
-            pm.warning('No objects selected for export.')
+            pm.warning("No objects selected for export.")
             return
         if not self.exportPath:
-            pm.warning('No export path selected.')
+            pm.warning("No export path selected.")
             return
 
-        # 需要导出的每个文件地址
-        for f in self.fileList:
-            # 处理导出名称
+        self.write_json()
+        with open("exp_data.json", "r") as r:
+            exp_data = json.load(r)
+
+        for f in exp_data["file_list"]:
             file_name = os.path.basename(f)
             bace_name = os.path.splitext(file_name)
-            exp_name = str(bace_name[0]) + '.fbx'
-            # 打开文件
+            exp_name = str(bace_name[0]) + ".fbx"
             pm.openFile(f, force=True)
+            # 烘焙关键帧
             try:
-                # 烘焙动画
                 pm.bakeResults(
-                    self.jnt_attr,
+                    exp_data["everyBakeAttr"],
                     simulation=True,
                     shape=False,
                     sampleBy=1,
@@ -112,24 +125,28 @@ class FbxExporterUI():
                     bakeOnOverrideLayer=False,
                     removeBakedAnimFromLayer=True,
                     # resolveWithoutLayer=cmds.ls(type='animLayer'),
-                    time=(pm.env.getMaxTime(), pm.env.getMinTime())
-                    )
-            except Exception as exc:
-                print(exc)
-            # 执行欧拉过滤器以防止动画曲线翻转
-            jnt_rotation = [jnt.r for jnt in self.objList]
-            pm.filterCurve(jnt_rotation, filter="euler")
-            # 选择骨架并导出
-            pm.select(self.objList)
-            pm.exportSelected(
-                os.path.join(self.exportPath, exp_name),
-                force=True,
-                type="FBX export"
+                    time=(pm.env.getMinTime(), pm.env.getMaxTime()),
                 )
-        # 弹出信息
-        pm.informBox(title='Export Complete', message='All selected objects have been exported successfully.')
+                # 执行欧拉过滤器以防止动画曲线翻转
+                everyRotation = [jnt.r for jnt in exp_data["jnt_list"]]
+                pm.filterCurve(everyRotation, filter="euler")
+            except Exception as exc:
+                pm.warning(exc)
+
+            pm.select(exp_data["jnt_list"])
+            pm.exportSelected(
+                os.path.join(exp_data["export_path"], exp_name),
+                force=True,
+                type="FBX export",
+                constraints=False,
+                expressions=False,
+            )
+        pm.informBox(
+            title="Export Complete",
+            message="All selected objects have been exported successfully.",
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     ui = FbxExporterUI()
     ui.show()
