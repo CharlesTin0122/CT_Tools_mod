@@ -1,12 +1,34 @@
 {
     "file_list": [
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_End.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Loop.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Loop_B.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Loop_F.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Loop_L.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Loop_R.mb",
-        "D:/Work/Animation/Gliding/Anim_Human_Gliding_Start.mb"
+        "D:/Work/Animation/climb/RM/Climbing_Climb_D_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_DL_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_DR_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_L_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_R_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_U_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_UL_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Climb_UR_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_ClimbUpAtTop_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_D_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_DL_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_DR_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_L_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_R_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_U_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_UL_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Dash_UR_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Drop_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Falling_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_GrabWall_FromAir_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_GrabWall_FromGround_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_GrabWall_FromTop_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Idle_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_Jump_Out_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_StopMoving_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_TurnCorner_Inside_L_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_TurnCorner_Inside_R_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_TurnCorner_Outside_L_RM.mb",
+        "D:/Work/Animation/climb/RM/Climbing_TurnCorner_Outside_R_RM.mb"
     ],
     "jnt_list": [
         "skin:root",
@@ -892,5 +914,5 @@
         "skin:Camera.sy",
         "skin:Camera.sz"
     ],
-    "export_path": "D:/Work/Animation/Gliding/Export"
+    "export_path": "D:/Work/Animation/climb/RM/Export"
 }
