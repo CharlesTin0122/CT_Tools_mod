@@ -108,16 +108,24 @@ class AdvAnimToolsUI:
             pm.PopupError('Nothing To Import')
             return
 
+        all_ctrl_sets = pm.PyNode('rig_controllers_grp')
+        self.all_ctrls = all_ctrl_sets.members()
         # 遍历导入文件
         for fbxPath in self.fbxList:
+            # 删除动画并重置控制器位置
+            for ctrl in self.all_ctrls:
+                keyable_attrs = pm.listAttr(ctrl, keyable=True)
+                animatable_attrs = pm.listAnimatable(ctrl)
+                for attr in animatable_attrs:
+                    self.deleteConnection(f"{attr}")
+                anim_utils.reset_selected_channels_value([ctrl], keyable_attrs)
+
             # 设定帧率
             pm.currentUnit(time='ntsc')  # 30 fps
             pm.env.setMinTime(0)
             pm.env.setMaxTime(1)
             pm.currentTime(0)
             # 全部控制器尅帧
-            all_ctrl_sets = pm.PyNode('rig_controllers_grp')
-            self.all_ctrls = all_ctrl_sets.members()
             pm.setKeyframe(self.all_ctrls)
             # 设置绑定手脚为FK模式
             fkik_attr = [
@@ -263,13 +271,6 @@ class AdvAnimToolsUI:
                 file_path = os.path.join(self.savePath, short_name + ".mb")
                 print(file_path)
                 pm.saveAs(file_path, force=True)
-            # 删除动画并重置控制器位置
-            for ctrl in self.all_ctrls:
-                keyable_attrs = pm.listAttr(ctrl, keyable=True)
-                animatable_attrs = pm.listAnimatable(ctrl)
-                for attr in animatable_attrs:
-                    self.deleteConnection(f"{attr}")
-                anim_utils.reset_selected_channels_value([ctrl], keyable_attrs)
 
         if self.savePath:
             confirm = pm.confirmDialog(title='Finish', message="Done!", button=['OK', 'Open Folder'])
