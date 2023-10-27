@@ -11,7 +11,7 @@ import sys
 import pymel.core as pm
 
 # 确定菜单分类，获取菜单文件夹所在的路径，获取菜单文件夹所在路径
-menuList = ['Animation', 'Rigging', 'TD']
+menuList = ['modeling', 'Rigging', 'Animation', 'TD']
 currentFilePath = r'{}'.format(os.path.dirname(__file__))
 ScriptPackagesPath = r'{}\ScriptPackages'.format(currentFilePath)
 commPath = [r'{}\{}'.format(currentFilePath, folder) for folder in menuList]

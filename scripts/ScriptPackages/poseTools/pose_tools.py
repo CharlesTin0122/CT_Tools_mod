@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-# @FileName :  pose_tools.py
-# @Author   : TianChao
-# @Email    : tianchao0533@gamil.com
-# @Time     :  2023/5/25 16:13
-# @Software : PyCharm
-# Description:
+'''
+@FileName      : pose_tools.py
+@DateTime      : 2023/10/25 17:57:12
+@Author        : Tian Chao
+@Contact       : tianchao0533@163.com
+@Software      : Maya 2023.3
+@PythonVersion : python 3.9.7
+@Description   :
+'''
 import pymel.core as pm
 
 
@@ -36,13 +39,13 @@ class PoseToolsUI:
         pm.showWindow(win)
 
     def copyPose(self, *args):
-        sel_obj = pm.selected()
-        attr_list = [i.listAnimatable() for i in sel_obj]
-
-        for i in attr_list:
-            for y in i:
-                x = str(y)
-                self.attr.append(x)
+        sel_obj = pm.selected()  # 获取选中的对象列表
+        attr_list = [obj.listAnimatable() for obj in sel_obj]  # 获取每个对象的属性列表
+        # 遍历属性列表中的每个属性
+        for attrs in attr_list:
+            for attr in attrs:
+                sttr_str = str(attr)
+                self.attr.append(sttr_str)
 
         self.attrVal = [pm.getAttr(s) for s in self.attr]
 
@@ -68,12 +71,9 @@ class PoseToolsUI:
         mir_data = dict(mir_zip_list)
 
         for key, value in mir_data.items():
-            if ('IK' in key or 'Pole' in key) and ('translateX' in key or 'rotateY' in key or 'rotateZ' in key):
+            if ('leg' in key and 'ik' in key) and ('translateX' in key or 'rotateY' in key or 'rotateZ' in key):
                 pm.setAttr(key, value * -1)
-            elif ('RootX_M' in key) and ('translateX' in key or 'rotateY' in key or 'rotateZ' in key):
-                pm.setAttr(key, value * -1)
-            elif ('FKRoot' in key or 'Spine' in key or 'Chest' in key or 'Neck' in key or 'Head' in key) and (
-                    'rotateX' in key or 'rotateY' in key):
+            elif ('_C' in key) and ('translateX' in key or 'rotateY' in key or 'rotateZ' in key):
                 pm.setAttr(key, value * -1)
             else:
                 pm.setAttr(key, value)
