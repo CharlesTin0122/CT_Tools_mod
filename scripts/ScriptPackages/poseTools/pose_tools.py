@@ -16,6 +16,8 @@ class PoseToolsUI:
         self.attr = []
         self.attrVal = []
         self.data = {}
+        self.sel_list = []
+        self.world_matrix_list = []
         self.template = pm.uiTemplate('cpTemplate', force=True)
         self.template.define(pm.button, width=200, height=30, align='right')
         self.template.define(pm.frameLayout, borderVisible=True, labelVisible=False)
@@ -36,7 +38,8 @@ class PoseToolsUI:
                             pm.button(label='Paste Pose', c=self.pastePose)
                             pm.button(label='Paste Mirror Pose', c=self.pasteMirPose)
                             pm.button(label="Mirror Animation", c=self.mirror_anim)
-        pm.showWindow(win)
+                            pm.button(label="Get World Matrix", c=self.get_world_matrix)
+                            pm.button(label="Set World Matrix Range", c=self.set_world_matrix_range)
 
     def copyPose(self, *args):
         sel_obj = pm.selected()  # 获取选中的对象列表
@@ -85,6 +88,19 @@ class PoseToolsUI:
             pm.currentTime(frame)
             self.copyPose()
             self.pasteMirPose()
+
+    def get_world_matrix(self, *args):
+        self.sel_list = pm.selected()
+        self.world_matrix_list = [obj.getMatrix(worldSpace=True) for obj in self.sel_list]
+
+    def set_world_matrix_range(self, *args):
+        aTimeSlider = pm.mel.eval('$tmpVar=$gPlayBackSlider')
+        timeRange = pm.timeControl(aTimeSlider, q=True, rangeArray=True)
+        for frame in range(int(timeRange[0]), int(timeRange[1])):
+            pm.currentTime(frame)
+            for i, obj in enumerate(self.sel_list):
+                obj.setMatrix(self.world_matrix_list[i], worldSpace=True)
+                pm.setKeyframe(obj)
 
 
 # Create an instance of the CopyNPastePoseUI class to run the script

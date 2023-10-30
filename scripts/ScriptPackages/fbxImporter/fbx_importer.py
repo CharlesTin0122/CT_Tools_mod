@@ -145,6 +145,8 @@ class AdvAnimToolsUI:
 
             pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
             pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
+            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
+            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
 
             joint_sl = [
                 "spine_01", "spine_02", "spine_03", "neck_01", "head",
@@ -203,13 +205,13 @@ class AdvAnimToolsUI:
             ctrl_bk = [
                 "root_main_C0_ctl", "root_C0_ctl", "body_C0_ctl",
                 "spine_C0_fk0_ctl", "spine_C0_fk1_ctl", "spine_C0_fk2_ctl", "neck_C0_fk0_ctl", "neck_C0_head_ctl",
-                "clavicle_L0_ctl", "arm_L0_fk0_ctl", "arm_L0_fk1_ctl", "arm_L0_fk2_ctl",
+                "clavicle_L0_ctl", "arm_L0_fk0_ctl", "arm_L0_fk1_ctl", "arm_L0_fk2_ctl", "Weapon_L_L0_ctl",
                 "thumb_L0_fk0_ctl", "thumb_L0_fk1_ctl", "thumb_L0_fk2_ctl",
                 "index_L0_fk0_ctl", "index_L0_fk1_ctl", "index_L0_fk2_ctl",
                 "middle_L0_fk0_ctl", "middle_L0_fk1_ctl", "middle_L0_fk2_ctl",
                 "ring_L0_fk0_ctl", "ring_L0_fk1_ctl", "ring_L0_fk2_ctl",
                 "pinky_L0_fk0_ctl", "pinky_L0_fk1_ctl", "pinky_L0_fk2_ctl",
-                "clavicle_R0_ctl", "arm_R0_fk0_ctl", "arm_R0_fk1_ctl", "arm_R0_fk2_ctl",
+                "clavicle_R0_ctl", "arm_R0_fk0_ctl", "arm_R0_fk1_ctl", "arm_R0_fk2_ctl", "Weapon_R_R0_ctl",
                 "thumb_R0_fk0_ctl", "thumb_R0_fk1_ctl", "thumb_R0_fk2_ctl",
                 "index_R0_fk0_ctl", "index_R0_fk1_ctl", "index_R0_fk2_ctl",
                 "middle_R0_fk0_ctl", "middle_R0_fk1_ctl", "middle_R0_fk2_ctl",
@@ -222,8 +224,6 @@ class AdvAnimToolsUI:
                            disableImplicitControl=True, preserveOutsideKeys=True, sparseAnimCurveBake=False,
                            removeBakedAttributeFromLayer=False, removeBakedAnimFromLayer=False,
                            bakeOnOverrideLayer=False, minimizeRotation=True, controlPoints=False, shape=True)
-            # 欧拉过滤
-            pm.filterCurve(ctrl_bk)
             # 删除传递动画骨骼
             pm.delete('root')
             # 烘焙手脚为动画为IK（以修正手肘膝盖旋转错误）
@@ -265,6 +265,10 @@ class AdvAnimToolsUI:
                     "leg_L0_ik_ctl",
                     "leg_L0_upv_ctl",
                 )
+            # 欧拉过滤
+            ctrl_grp = pm.PyNode("rig_controllers_grp")
+            all_ctrls = ctrl_grp.members()
+            pm.filterCurve(all_ctrls)
             # 保存文件
             if self.savePath:
                 short_name = os.path.splitext(os.path.basename(fbxPath))[0]
