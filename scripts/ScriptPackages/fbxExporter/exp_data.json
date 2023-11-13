@@ -1,8 +1,13 @@
 {
     "file_list": [
-        "D:/Work/Music/music_modify/Anim_Human_PlayMusic_PiPa_Idle.mb",
-        "D:/Work/Music/music_modify/Anim_Human_PlayMusic_PiPa_Idle2Play.mb",
-        "D:/Work/Music/music_modify/Anim_Human_PlayMusic_PiPa_Play.mb"
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo02_2.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo02_All.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo03_All.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo05_All.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_B.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_F.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_L.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_R.mb"
     ],
     "jnt_list": [
         "skin:root",
@@ -878,5 +883,5 @@
         "skin:ik_hand_r.sy",
         "skin:ik_hand_r.sz"
     ],
-    "export_path": "D:/Work/Music/music_modify/export"
+    "export_path": "D:/Work/Animation/SQZD/Export"
 }

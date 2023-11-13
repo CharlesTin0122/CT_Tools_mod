@@ -201,29 +201,7 @@ class AdvAnimToolsUI:
             last_frame = int(time_value[-1])
             pm.env.setMinTime(first_frame)
             pm.env.setMaxTime(last_frame)
-            # 烘焙动画
-            ctrl_bk = [
-                "root_main_C0_ctl", "root_C0_ctl", "body_C0_ctl",
-                "spine_C0_fk0_ctl", "spine_C0_fk1_ctl", "spine_C0_fk2_ctl", "neck_C0_fk0_ctl", "neck_C0_head_ctl",
-                "clavicle_L0_ctl", "arm_L0_fk0_ctl", "arm_L0_fk1_ctl", "arm_L0_fk2_ctl", "Weapon_L_L0_ctl",
-                "thumb_L0_fk0_ctl", "thumb_L0_fk1_ctl", "thumb_L0_fk2_ctl",
-                "index_L0_fk0_ctl", "index_L0_fk1_ctl", "index_L0_fk2_ctl",
-                "middle_L0_fk0_ctl", "middle_L0_fk1_ctl", "middle_L0_fk2_ctl",
-                "ring_L0_fk0_ctl", "ring_L0_fk1_ctl", "ring_L0_fk2_ctl",
-                "pinky_L0_fk0_ctl", "pinky_L0_fk1_ctl", "pinky_L0_fk2_ctl",
-                "clavicle_R0_ctl", "arm_R0_fk0_ctl", "arm_R0_fk1_ctl", "arm_R0_fk2_ctl", "Weapon_R_R0_ctl",
-                "thumb_R0_fk0_ctl", "thumb_R0_fk1_ctl", "thumb_R0_fk2_ctl",
-                "index_R0_fk0_ctl", "index_R0_fk1_ctl", "index_R0_fk2_ctl",
-                "middle_R0_fk0_ctl", "middle_R0_fk1_ctl", "middle_R0_fk2_ctl",
-                "ring_R0_fk0_ctl", "ring_R0_fk1_ctl", "ring_R0_fk2_ctl",
-                "pinky_R0_fk0_ctl", "pinky_R0_fk1_ctl", "pinky_R0_fk2_ctl",
-                "leg_L0_fk0_ctl", "leg_L0_fk1_ctl", "leg_L0_fk2_ctl", "foot_L0_fk0_ctl",
-                "leg_R0_fk0_ctl", "leg_R0_fk1_ctl", "leg_R0_fk2_ctl", "foot_R0_fk0_ctl"
-            ]
-            pm.bakeResults(ctrl_bk, simulation=True, time=(first_frame, last_frame), sampleBy=1, oversamplingRate=1,
-                           disableImplicitControl=True, preserveOutsideKeys=True, sparseAnimCurveBake=False,
-                           removeBakedAttributeFromLayer=False, removeBakedAnimFromLayer=False,
-                           bakeOnOverrideLayer=False, minimizeRotation=True, controlPoints=False, shape=True)
+
             # 删除传递动画骨骼
             pm.delete('root')
             # 烘焙手脚为动画为IK（以修正手肘膝盖旋转错误）
