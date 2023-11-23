@@ -1,13 +1,8 @@
 {
     "file_list": [
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo02_2.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo02_All.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo03_All.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Combo05_All.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_B.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_F.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_L.mb",
-        "D:/Work/Animation/SQZD/Frank_RPG_2Hand_Evade_R.mb"
+        "D:/Work/Animation/SQZD/Anim_Male_2H_GreatHammer_Combo01_02.mb",
+        "D:/Work/Animation/SQZD/Anim_Male_2H_GreatHammer_Combo01_04.mb",
+        "D:/Work/Animation/SQZD/Frank_RPG_GreatSword_Skill01_Retargeted.mb"
     ],
     "jnt_list": [
         "skin:root",
