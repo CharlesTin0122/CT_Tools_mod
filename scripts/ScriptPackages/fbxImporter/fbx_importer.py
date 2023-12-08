@@ -148,8 +148,8 @@ class AdvAnimToolsUI:
 
             pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
             pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
-            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
-            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
+            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=False)
+            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=False)
 
             joint_sl = [
                 "spine_01",

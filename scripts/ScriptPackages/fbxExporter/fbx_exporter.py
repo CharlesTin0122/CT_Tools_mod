@@ -12,9 +12,10 @@ import pymel.core as pm
 
 class FbxExporterUI:
     """骨骼动画批量导出
-    因为使用mGear绑定框架，绑定的骨骼通道被矩阵约束链接，而不是约束节点约束，所以一般的烘焙动画功能无法使用。
+    因为使用mGear绑定框架,绑定的骨骼通道被矩阵约束链接，而不是约束节点约束，所以一般的烘焙动画功能无法使用。
     所以使用了枚举属性烘焙的方法，将动画烘焙到骨骼属性通道。然后再导出骨骼动画。
     """
+
     def __init__(self):
         self.export_path_field = None
         self.fileList = []
@@ -27,8 +28,7 @@ class FbxExporterUI:
         self.slyOBJ = None
 
     def show(self):
-        """创建UI
-        """
+        """创建UI"""
         try:
             pm.deleteUI("fbxExport")
         except Exception as exc:
@@ -60,8 +60,7 @@ class FbxExporterUI:
         self.window.show()
 
     def load_files(self, *args):
-        """载入要导出的maya文件(*.ma *.mb)
-        """
+        """载入要导出的maya文件(*.ma *.mb)"""
         self.fileList = pm.fileDialog2(fileFilter="Maya Files (*.ma *.mb)", fileMode=4)
         if not self.fileList:
             pm.warning("No files selected for export.")
@@ -71,8 +70,7 @@ class FbxExporterUI:
                 pm.text(label=os.path.basename(file))
 
     def load_objects(self, *args):
-        """载入文件中要导出的对象，一般为所有骨骼链
-        """
+        """载入文件中要导出的对象，一般为所有骨骼链"""
         self.objList = [str(x) for x in pm.selected()]
         if not self.objList:
             pm.warning("No objects selected for export.")
@@ -89,30 +87,27 @@ class FbxExporterUI:
                 self.everyBakeAttr.append(f"{eachJoint}.{eachAttr}")
 
     def select_export_path(self, *args):
-        """选择导出路径
-        """
+        """选择导出路径"""
         export_path = pm.fileDialog2(fileFilter="*folder", fileMode=2)
         if export_path:
             self.exportPath = export_path[0]
             pm.textField(self.export_path_field, e=True, text=self.exportPath)
 
     def write_json(self, *args):
-        """将导出信息写入json文件
-        """
+        """将导出信息写入json文件"""
         self.exp_data = {
             "file_list": self.fileList,
             "jnt_list": self.objList,
             "everyBakeAttr": self.everyBakeAttr,
             "export_path": self.exportPath,
         }
-        current_path = rf'{os.path.dirname(__file__)}'
+        current_path = rf"{os.path.dirname(__file__)}"
         json_file = os.path.join(current_path, "exp_data.json")
         with open(json_file, "w") as d:
             json.dump(self.exp_data, d, indent=4)
 
     def export_all(self, *args):
-        """执行批量导出
-        """
+        """执行批量导出"""
         if not self.fileList:
             pm.warning("No files selected for export.")
             return
@@ -124,7 +119,7 @@ class FbxExporterUI:
             return
 
         self.write_json()
-        current_path = rf'{os.path.dirname(__file__)}'
+        current_path = rf"{os.path.dirname(__file__)}"
         json_file = os.path.join(current_path, "exp_data.json")
         with open(json_file, "r") as r:
             exp_data = json.load(r)
@@ -148,7 +143,7 @@ class FbxExporterUI:
                     time=(pm.env.getMinTime(), pm.env.getMaxTime()),
                 )
                 # 执行欧拉过滤器以防止动画曲线翻转
-                everyRotation = [f'{jnt}.r' for jnt in exp_data["jnt_list"]]
+                everyRotation = [f"{jnt}.r" for jnt in exp_data["jnt_list"]]
                 pm.filterCurve(everyRotation, filter="euler")
             except Exception as exc:
                 print(exc)
@@ -160,10 +155,12 @@ class FbxExporterUI:
                 type="FBX export",
                 constraints=False,
                 expressions=False,
-                constructionHistory=False
+                constructionHistory=False,
             )
-        confirm = pm.confirmDialog(title='Finish', message="Done!", button=['OK', 'Open Folder'])
-        if confirm == 'Open Folder':
+        confirm = pm.confirmDialog(
+            title="Finish", message="Done!", button=["OK", "Open Folder"]
+        )
+        if confirm == "Open Folder":
             os.startfile(exp_data["export_path"])
 
 
