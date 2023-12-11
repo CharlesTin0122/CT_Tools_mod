@@ -69,7 +69,7 @@ class PoseToolsUI:
         with open(json_file, "w") as d:
             json.dump(self.anim_data, d, indent=4)
 
-    def copyPose(self):
+    def copyPose(self, *args):
         """复制选定对象的动画属性"""
         sel_list = pm.selected()  # 获取选中的对象列表
         attr_list = [obj.listAnimatable() for obj in sel_list]  # 获取每个对象的属性列表
@@ -85,12 +85,12 @@ class PoseToolsUI:
         zip_list = zip(self.attr, self.attrVal)
         self.data = dict(zip_list)
 
-    def pastePose(self):
+    def pastePose(self, *args):
         """粘贴选定对象的动画属性"""
         for key, value in self.data.items():
             pm.setAttr(key, value)
 
-    def pasteMirPose(self):
+    def pasteMirPose(self, *args):
         """镜像粘贴选定对象的动画属性"""
         mir_list = []
         for a in self.attr:
@@ -117,7 +117,7 @@ class PoseToolsUI:
             else:
                 pm.setAttr(key, value)
 
-    def mirror_anim(self):
+    def mirror_anim(self, *args):
         """镜像整段动画"""
         first_frame = pm.env.getMinTime()
         last_frame = pm.env.getMaxTime()
@@ -126,14 +126,14 @@ class PoseToolsUI:
             self.copyPose()
             self.pasteMirPose()
 
-    def get_world_matrix(self):
+    def get_world_matrix(self, *args):
         """获取选定对象的世界矩阵"""
         self.sel_list = pm.selected()
         self.world_matrix_list = [
             obj.getMatrix(worldSpace=True) for obj in self.sel_list
         ]
 
-    def set_world_matrix_range(self):
+    def set_world_matrix_range(self, *args):
         """在选定帧范围内设置对象的世界矩阵，主要用来定脚"""
         aTimeSlider = pm.mel.eval("$tmpVar=$gPlayBackSlider")  # 获取时间栏组件
         timeRange = pm.timeControl(aTimeSlider, q=True, rangeArray=True)  # 获取选定时间范围
@@ -144,7 +144,7 @@ class PoseToolsUI:
                 obj.setMatrix(self.world_matrix_list[i], worldSpace=True)
                 pm.setKeyframe(obj)
 
-    def pin_ctrl_anim(self):
+    def pin_ctrl_anim(self, *args):
         """为选定的控制器生成pin控制动画
         原理：
         1. 为每个控制器创建一个空间定位器.
@@ -171,7 +171,7 @@ class PoseToolsUI:
         for i, ctrl in enumerate(self.sel_list):
             pm.parentConstraint(self.ctrl_loc_list[i], ctrl, mo=True)
 
-    def bake_pined_anim(self):
+    def bake_pined_anim(self, *args):
         """烘焙控制器动画，并删除空间定位器"""
         pm.bakeResults(
             self.sel_list,
