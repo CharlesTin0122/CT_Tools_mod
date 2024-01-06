@@ -148,8 +148,8 @@ class AdvAnimToolsUI:
 
             pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
             pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
-            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=False)
-            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=False)
+            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
+            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
 
             joint_sl = [
                 "spine_01",
@@ -264,12 +264,12 @@ class AdvAnimToolsUI:
                     joint_sl[i], ctrl_sl[i], mo=True, skipTranslate=["x", "y", "z"]
                 )
             # 通过使用fbxSDK移除fbx文件中的namespace
-            fbx_file = pyFBX.FBX_Class(fbxPath)
-            try:
-                fbx_file.remove_namespace()
-                fbx_file.save()
-            except Exception as e:
-                print(e)
+            # fbx_file = pyFBX.FBX_Class(fbxPath)
+            # try:
+            #     fbx_file.remove_namespace()
+            #     fbx_file.save()
+            # except Exception as e:
+            #     print(e)
             # 执行导入文件
             pm.importFile(fbxPath)
             # 确定时间范围
