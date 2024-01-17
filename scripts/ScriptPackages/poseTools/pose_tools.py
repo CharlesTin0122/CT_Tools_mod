@@ -56,18 +56,21 @@ class PoseToolsUI:
                             pm.button(label="Pin Ctrl Anim", c=self.pin_ctrl_anim)
                             pm.button(label="Bake Pined Anim", c=self.bake_pined_anim)
 
-    # TODO :引入Jason文件
-    def write_json(self):
+    # 引入Jason文件
+    def write_json(self, json_data: dict, json_name: str):
         """将导出信息写入json文件"""
-        self.anim_data = {
-            "sel_list": self.sel_list,
-            "anim_data": self.data,
-            "world_matrix_list": self.world_matrix_list,
-        }
         current_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(current_path, "anim_data.json")
+        json_file = os.path.join(current_path, f"{json_name}.json")
         with open(json_file, "w") as d:
-            json.dump(self.anim_data, d, indent=4)
+            json.dump(json_data, d, indent=4)
+
+    def read_json(self, json_name: str):
+        """读取json文件"""
+        current_path = rf"{os.path.dirname(__file__)}"
+        json_file = os.path.join(current_path, f"{json_name}.json")
+        with open(json_file, "r") as r:
+            self.json_data = json.load(r)
+        return self.json_data
 
     def copyPose(self, *args):
         """复制选定对象的动画属性"""
@@ -84,25 +87,39 @@ class PoseToolsUI:
 
         zip_list = zip(self.attr, self.attrVal)
         self.data = dict(zip_list)
+        self.sel_list = [str(s) for s in sel_list]
+
+        pose_data = {
+            "sel_list": self.sel_list,
+            "anim_data": self.data,
+        }
+        self.write_json(pose_data, "pose_data")
 
     def pastePose(self, *args):
         """粘贴选定对象的动画属性"""
-        for key, value in self.data.items():
+        anim_data = self.read_json("pose_data")
+        pose_data = anim_data["anim_data"]
+        for key, value in pose_data.items():
             pm.setAttr(key, value)
 
     def pasteMirPose(self, *args):
         """镜像粘贴选定对象的动画属性"""
-        mir_list = []
-        for a in self.attr:
-            if "_L" in a:
-                mir = a.replace("_L", "_R")
-            elif "_R" in a:
-                mir = a.replace("_R", "_L")
-            else:
-                mir = a
-            mir_list.append(mir)
+        anim_data = self.read_json("pose_data")
+        pose_data = anim_data["anim_data"]
 
-        mir_zip_list = zip(mir_list, self.attrVal)
+        mir_list = []
+        mir_val = []
+        for key, value in pose_data.items():
+            if "_L" in key:
+                mir = key.replace("_L", "_R")
+            elif "_R" in key:
+                mir = key.replace("_R", "_L")
+            else:
+                mir = key
+            mir_list.append(mir)
+            mir_val.append(value)
+
+        mir_zip_list = zip(mir_list, mir_val)
         mir_data = dict(mir_zip_list)
 
         for key, value in mir_data.items():
