@@ -11,6 +11,7 @@
 import json
 import os
 import pymel.core as pm
+import maya.cmds as cmds
 
 
 class PoseToolsUI:
@@ -92,6 +93,7 @@ class PoseToolsUI:
         pose_data = {
             "sel_list": self.sel_list,
             "anim_data": self.data,
+            "world_matrix_list": self.world_matrix_list
         }
         self.write_json(pose_data, "pose_data")
 
@@ -145,20 +147,32 @@ class PoseToolsUI:
 
     def get_world_matrix(self, *args):
         """获取选定对象的世界矩阵"""
-        self.sel_list = pm.selected()
+        self.sel_list = cmds.ls(sl=True)
         self.world_matrix_list = [
-            obj.getMatrix(worldSpace=True) for obj in self.sel_list
+            cmds.xform(obj, query=True, matrix=True, worldSpace=True) for obj in self.sel_list
         ]
+
+        pose_data = {
+            "sel_list": self.sel_list,
+            "anim_data": self.data,
+            "world_matrix_list": self.world_matrix_list
+        }
+        self.write_json(pose_data, "pose_data")
 
     def set_world_matrix_range(self, *args):
         """在选定帧范围内设置对象的世界矩阵，主要用来定脚"""
         aTimeSlider = pm.mel.eval("$tmpVar=$gPlayBackSlider")  # 获取时间栏组件
         timeRange = pm.timeControl(aTimeSlider, q=True, rangeArray=True)  # 获取选定时间范围
+        # 读取json数据
+        anim_data = self.read_json("pose_data")
+        sel_list = anim_data["sel_list"]
+        matrix_list = anim_data["world_matrix_list"]
+
         # 遍历所有帧并设置获取的世界矩阵
         for frame in range(int(timeRange[0]), int(timeRange[1])):
             pm.currentTime(frame)
-            for i, obj in enumerate(self.sel_list):
-                obj.setMatrix(self.world_matrix_list[i], worldSpace=True)
+            for i, obj in enumerate(sel_list):
+                cmds.xform(obj, matrix=matrix_list[i], worldSpace=True)
                 pm.setKeyframe(obj)
 
     def pin_ctrl_anim(self, *args):
