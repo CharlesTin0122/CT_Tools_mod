@@ -273,7 +273,7 @@ class AdvAnimToolsUI:
             except Exception as e:
                 print(e)
             # 执行导入文件
-            pm.importFile(fbxPath)
+            pm.importFile(fbxPath, defaultNamespace=True)
             # 确定时间范围
             time_value = pm.keyframe(
                 "pelvis.rotateX", query=True, timeChange=True, absolute=True
