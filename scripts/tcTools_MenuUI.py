@@ -10,11 +10,15 @@ import os
 import sys
 import pymel.core as pm
 
-# 确定菜单分类，获取菜单文件夹所在的路径，获取菜单文件夹所在路径
+# 确定菜单分类
 menuList = ['modeling', 'Rigging', 'Animation', 'TD']
+# 获取当前脚本所在路径
 currentFilePath = r'{}'.format(os.path.dirname(__file__))
+# 获取脚本包所在路径
 ScriptPackagesPath = r'{}\ScriptPackages'.format(currentFilePath)
+# 添加子菜单文件夹所在路径进入命令路径
 commPath = [r'{}\{}'.format(currentFilePath, folder) for folder in menuList]
+# 添加脚本包所在路径进入命令路径
 commPath.append(ScriptPackagesPath)
 print(commPath, ScriptPackagesPath)
 
@@ -30,25 +34,19 @@ for path in commPath:
         print('Already In Evn Path!')
     else:
         os.environ['MAYA_SCRIPT_PATH'] = '{};{}'.format(path, os.getenv('MAYA_SCRIPT_PATH'))
+
 # 获取菜单和子菜单目录
-menuItemList = []
+menuItemDict = {}
 for item in menuList:
-    path = r'{}\{}'.format(currentFilePath, item)
-    for parent, dirnames, filenames in os.walk(path):
+    itemlist = []
+    item_path = os.path.join(currentFilePath, item)
+    for root_file, dirnames, filenames in os.walk(item_path):
         if filenames:
-            itemlist = []
             for f in filenames:
                 if (f.split('.')[-1] == 'py') and (f.split('.')[0] not in itemlist):
                     itemlist.append(f.split('.')[0])
-                menuItemList.append([item, itemlist])
-
-listA = menuItemList
-menuItemList = []
-for i in listA:
-    if i not in menuItemList:
-        menuItemList.append(i)
-
-print(menuItemList)
+    menuItemDict[item] = itemlist
+print(menuItemDict)
 
 
 # 创建菜单
@@ -61,19 +59,19 @@ def createMenu(*args):
     gMainWindow = pm.mel.eval('$tmpVar=$gMainWindow')
     myMenu = pm.menu('myMenu', label='tcTools', p=gMainWindow, tearOff=True)
 
-    for menuItem in menuItemList:
+    for item, itemlist in menuItemDict.items():
         pm.menuItem(
-            '{}_mItem'.format(menuItem[0]),
-            label=menuItem[0],
+            '{}_mItem'.format(item),
+            label=item,
             subMenu=True,
             p=myMenu,
             tearOff=True
         )
-        for comm in menuItem[1]:
+        for comm in itemlist:
             pm.menuItem(
                 '{}_mItem'.format(comm),
                 label=comm,
-                p='{}_mItem'.format(menuItem[0]),
+                p='{}_mItem'.format(item),
                 c='import {0};from importlib import reload;reload({0})'.format(comm)
             )
 
