@@ -36,30 +36,39 @@ for path in commPath:
         os.environ['MAYA_SCRIPT_PATH'] = '{};{}'.format(path, os.getenv('MAYA_SCRIPT_PATH'))
 
 # 获取菜单和子菜单目录
-menuItemDict = {}
+menuItemDict = {}  # 创建字典以接受菜单和子菜单数据
+# 遍历菜单路径找到路径下的模块文件
 for item in menuList:
     itemlist = []
     item_path = os.path.join(currentFilePath, item)
+    # 遍历路径找到所有文件
     for root_file, dirnames, filenames in os.walk(item_path):
         if filenames:
             for f in filenames:
+                # 如果模块文件名以py结尾并且不在itemlist中
                 if (f.split('.')[-1] == 'py') and (f.split('.')[0] not in itemlist):
+                    # 将模块名添加进itemlist列表
                     itemlist.append(f.split('.')[0])
+    # 将item和itemlist添加到字典中
     menuItemDict[item] = itemlist
 print(menuItemDict)
 
 
-# 创建菜单
+# 创建菜单函数
 def createMenu(*args):
+    # 尝试删除菜单，防止重复创建
     try:
         pm.deleteUI('myMenu')
     except Exception as exc:
         print(exc)
-
+    # 获取maya主窗口变量
     gMainWindow = pm.mel.eval('$tmpVar=$gMainWindow')
+    print(gMainWindow)
+    # 在主窗口菜单栏创建菜单
     myMenu = pm.menu('myMenu', label='tcTools', p=gMainWindow, tearOff=True)
 
     for item, itemlist in menuItemDict.items():
+        # 创建子菜单
         pm.menuItem(
             '{}_mItem'.format(item),
             label=item,
@@ -67,6 +76,7 @@ def createMenu(*args):
             p=myMenu,
             tearOff=True
         )
+        # 创建子菜单的菜单项
         for comm in itemlist:
             pm.menuItem(
                 '{}_mItem'.format(comm),
@@ -76,7 +86,7 @@ def createMenu(*args):
             )
 
 
-# 删除菜单
+# 删除菜单函数
 def deleteMenu(*args):
     if pm.menu('myMenu', ex=True):
         pm.deleteUI('myMenu')
