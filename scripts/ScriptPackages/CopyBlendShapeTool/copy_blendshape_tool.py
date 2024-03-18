@@ -17,18 +17,17 @@ class CopyBlendShapeTool:
     """
 
     def init(self):
-        """构建函数
-        """
+        """构建函数"""
         self.source_mesh_field = None
         self.blendshape_field = None
         self.target_meshes_field = None
+
         self.source_mesh = None
         self.target_meshes = []
         self.select_blendshapes = []
 
     def create_ui(self):
-        """创建UI
-        """
+        """创建UI"""
         try:
             pm.deleteUI("win_CopyBSTool")
         except Exception as exc:
@@ -40,8 +39,8 @@ class CopyBlendShapeTool:
             maximizeButton=True,
             minimizeButton=True,
             sizeable=1,
-            widthHeight=(258, 466)
-            )
+            widthHeight=(258, 466),
+        )
 
         with pm.columnLayout(adj=True):
             pm.text(label="Copy BS From:", h=30)
@@ -52,7 +51,9 @@ class CopyBlendShapeTool:
             pm.text(label="Copy BS To:", h=30)
             pm.button(label="Add target meshes", c=self.slot_add_target_meshes)
             self.target_meshes_field = pm.textScrollList()
-            pm.button(label="Copy BlendShapes", w=30, h=50, c=self.slot_copy_blendshapes)
+            pm.button(
+                label="Copy BlendShapes", w=30, h=50, c=self.slot_copy_blendshapes
+            )
 
         pm.window("win_CopyBSTool", e=True, w=100, h=500)
         win.show()
@@ -125,7 +126,9 @@ class CopyBlendShapeTool:
         source_mesh = pm.selected()[0]
         pm.textField(self.source_mesh_field, e=True, text=source_mesh)
         # 将该模型的混合变形名称添加到UI当中
-        bs_info_list = self.find_blendshape_info(source_mesh)  # 获取该模型的混合变形信息
+        bs_info_list = self.find_blendshape_info(
+            source_mesh
+        )  # 获取该模型的混合变形信息
         # 通过混合变形信息，获取混合变形名称·
         bs_name_list = []
         for bs_info in bs_info_list:
@@ -153,11 +156,18 @@ class CopyBlendShapeTool:
         将选中的源模型混合变形复制到目标模型。
         """
         self.source_mesh = pm.textField(self.source_mesh_field, q=True, text=True)
-        self.target_meshes = pm.textScrollList(self.target_meshes_field, q=True, allItems=True)
-        self.select_blendshapes = pm.textScrollList(self.blendshape_field, q=True, selectItem=True)
+        self.target_meshes = pm.textScrollList(
+            self.target_meshes_field, q=True, allItems=True
+        )
+        self.select_blendshapes = pm.textScrollList(
+            self.blendshape_field, q=True, selectItem=True
+        )
 
-        self.copy_blendshapes(self.source_mesh, self.target_meshes, self.select_blendshapes)
+        self.copy_blendshapes(
+            self.source_mesh, self.target_meshes, self.select_blendshapes
+        )
 
 
 if __name__ == "__main__":
-    CopyBlendShapeTool().create_ui()
+    cbt = CopyBlendShapeTool()
+    cbt.create_ui()
