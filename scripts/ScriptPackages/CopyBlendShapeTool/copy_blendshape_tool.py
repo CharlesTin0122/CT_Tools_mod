@@ -33,29 +33,25 @@ class CopyBlendShapeTool:
         except Exception as exc:
             print(exc)
 
-        win = pm.window(
-            "win_CopyBSTool",
-            title="Copy BS Tool",
-            maximizeButton=True,
-            minimizeButton=True,
-            sizeable=1,
-            widthHeight=(258, 466),
-        )
+        win = pm.window("win_CopyBSTool", title="Copy BlendShape Tool", widthHeight=(300, 500))
 
         with pm.columnLayout(adj=True):
-            pm.text(label="Copy BS From:", h=30)
-            pm.button(label="Add source mesh", w=30, h=20, c=self.slot_add_source_mesh)
-            self.source_mesh_field = pm.textField()
-            pm.text(label="List BlendShape:", h=30)
-            self.blendshape_field = pm.textScrollList(allowMultiSelection=True)
-            pm.text(label="Copy BS To:", h=30)
-            pm.button(label="Add target meshes", c=self.slot_add_target_meshes)
-            self.target_meshes_field = pm.textScrollList()
-            pm.button(
-                label="Copy BlendShapes", w=30, h=50, c=self.slot_copy_blendshapes
-            )
+            pm.text(label="Copy BlendShapes", align="center", font="boldLabelFont", height=30)
+            with pm.rowLayout(numberOfColumns=2, columnWidth2=(100, 200), ad2=1):
+                self.source_mesh_field = pm.textField(width=190)
+                pm.button(label="Add Source Mesh", width=100, height=30, command=self.slot_add_source_mesh)
+            pm.text(label="BlendShapes:", height=20)
+            self.blendshape_field = pm.textScrollList(allowMultiSelection=True, height=100)
 
-        pm.window("win_CopyBSTool", e=True, w=100, h=500)
+            pm.separator(height=10)
+
+            pm.text(label="Target Meshes:", height=20)
+            pm.button(label="Add Target Meshes", width=50, height=30, command=self.slot_add_target_meshes)
+            self.target_meshes_field = pm.textScrollList(height=100)
+
+            pm.separator(height=10)
+
+            pm.button(label="Copy BlendShapes", width=30, height=60, command=self.slot_copy_blendshapes)
         win.show()
 
     def find_blendshape_info(self, source_mesh: pm.nodetypes.Transform) -> list:
