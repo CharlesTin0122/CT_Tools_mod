@@ -6,6 +6,6 @@
 # @Software : PyCharm
 # Description:
 from importlib import reload
-from generateDeformer import generate_deformer as gd
-reload(gd)
-gd.ShowUI()
+from CopyBlendShapeTool import copy_blendshape_tool as cbt
+reload(cbt)
+cbt.create_ui()

@@ -1,13 +1,12 @@
 {
     "file_list": [
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuQin_Idle.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuQin_Idle2Play.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuQin_Play.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuQin_Play02.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuSe_Idle.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuSe_Idle2Play.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuSe_Play.0001.mb",
-        "D:/Work/Animation/musical instrument/Anim_Human_PlayMusic_GuSe_Play02.0001.mb"
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_down.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop_left.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop_right.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_speed_up.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_speed_up_loop.mb",
+        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_up.mb"
     ],
     "jnt_list": [
         "skin:root",
@@ -883,5 +882,5 @@
         "skin:ik_hand_r.sy",
         "skin:ik_hand_r.sz"
     ],
-    "export_path": "D:/Work/Animation/musical instrument/Export"
+    "export_path": "D:/Work/Animation/fly_with_sword/export"
 }
