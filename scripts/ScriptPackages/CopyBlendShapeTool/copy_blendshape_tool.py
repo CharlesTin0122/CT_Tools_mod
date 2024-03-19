@@ -108,7 +108,11 @@ class CopyBlendShapeTool:
                         # 将该混合变形属性设置为0，返回未变形状态。
                         bs_info[1].set(0)
             pm.blendShape(bs_group, target_mesh)  # 创建混合变形
-            pm.delete(bs_group)  # 删除生成的混合变形所需的目标模型
+            # 重命名生成的混合变形所需的目标模型,并将其打组隐藏
+            for mesh in bs_group:
+                pm.rename(mesh, newname=f"{target_mesh}_{mesh}")
+            target_grp = pm.group(bs_group, name=f"{target_mesh}_target")  # 删除生成的混合变形所需的目标模型
+            pm.hide(target_grp)
         # 删除包裹变形器
         for mesh in target_meshes:
             wrap_node = pm.listHistory(mesh, type="wrap")
