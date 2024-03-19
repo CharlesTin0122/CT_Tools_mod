@@ -33,25 +33,49 @@ class CopyBlendShapeTool:
         except Exception as exc:
             print(exc)
 
-        win = pm.window("win_CopyBSTool", title="Copy BlendShape Tool", widthHeight=(300, 500))
+        win = pm.window(
+            "win_CopyBSTool", title="Copy BlendShape Tool", widthHeight=(300, 500)
+        )
 
         with pm.columnLayout(adj=True):
-            pm.text(label="Copy BlendShapes", align="center", font="boldLabelFont", height=30)
+            pm.text(
+                label="Copy BlendShapes",
+                align="center",
+                font="boldLabelFont",
+                height=30,
+            )
             with pm.rowLayout(numberOfColumns=2, columnWidth2=(100, 200), ad2=1):
                 self.source_mesh_field = pm.textField(width=190)
-                pm.button(label="Add Source Mesh", width=100, height=30, command=self.slot_add_source_mesh)
+                pm.button(
+                    label="Add Source Mesh",
+                    width=100,
+                    height=30,
+                    command=self.slot_add_source_mesh,
+                )
             pm.text(label="BlendShapes:", height=20)
-            self.blendshape_field = pm.textScrollList(allowMultiSelection=True, height=100)
+            self.blendshape_field = pm.textScrollList(
+                allowMultiSelection=True, height=100
+            )
 
             pm.separator(height=10)
 
             pm.text(label="Target Meshes:", height=20)
-            pm.button(label="Add Target Meshes", width=50, height=30, command=self.slot_add_target_meshes)
+            pm.button(
+                label="Add Target Meshes",
+                width=50,
+                height=30,
+                command=self.slot_add_target_meshes,
+            )
             self.target_meshes_field = pm.textScrollList(height=100)
 
             pm.separator(height=10)
 
-            pm.button(label="Copy BlendShapes", width=30, height=60, command=self.slot_copy_blendshapes)
+            pm.button(
+                label="Copy BlendShapes",
+                width=30,
+                height=60,
+                command=self.slot_copy_blendshapes,
+            )
         win.show()
 
     def find_blendshape_info(self, source_mesh: pm.nodetypes.Transform) -> list:
@@ -78,7 +102,12 @@ class CopyBlendShapeTool:
 
         return bs_info_list
 
-    def copy_blendshapes(self, source_mesh, target_meshes, select_blendshapes):
+    def copy_blendshapes(
+        self,
+        source_mesh: pm.nodetypes.Transform,
+        target_meshes: list,
+        select_blendshapes: list,
+    ):
         """
         将指定的混合变形从源模型复制到多个目标模型。
 
@@ -92,7 +121,8 @@ class CopyBlendShapeTool:
         # 选中模型并创建包裹变形器
         pm.select(target_meshes, replace=1)
         pm.select(source_mesh, toggle=1)
-        wrap_node = pm.cmds.CreateWrap()
+        wrap_node = pm.mel.performCreateWrap(False)
+        # wrap_node = pm.cmds.CreateWrap()
         # 获取源模型混合变形信息
         bs_info_list = self.find_blendshape_info(source_mesh)
         # 遍历目标模型生成混合变形所需的目标模型，并进行混合变形
@@ -111,7 +141,9 @@ class CopyBlendShapeTool:
             # 重命名生成的混合变形所需的目标模型,并将其打组隐藏
             for mesh in bs_group:
                 pm.rename(mesh, newname=f"{target_mesh}_{mesh}")
-            target_grp = pm.group(bs_group, name=f"{target_mesh}_target")  # 删除生成的混合变形所需的目标模型
+            target_grp = pm.group(
+                bs_group, name=f"{target_mesh}_target"
+            )  # 删除生成的混合变形所需的目标模型
             pm.hide(target_grp)
         # 删除包裹变形器
         for mesh in target_meshes:
