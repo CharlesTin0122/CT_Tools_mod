@@ -133,7 +133,8 @@ class CopyBlendShapeTool:
                     if bs_name == bs_info[0]:  # 如果指定的混合变形在混合变形信息中
                         bs_info[1].set(1)  # 则将该混合变形属性设置为1
                         # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
-                        bs_mesh = pm.duplicate(target_mesh, name=bs_name)[0]
+                        bs_mesh = pm.duplicate(target_mesh)[0]
+                        bs_mesh.rename(bs_name)
                         bs_group.append(bs_mesh)
                         # 将该混合变形属性设置为0，返回未变形状态。
                         bs_info[1].set(0)
