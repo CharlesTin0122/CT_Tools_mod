@@ -9,6 +9,7 @@
 @Description   :copy blendshape from source to target
 """
 import pymel.core as pm
+import pymel.core.nodetypes as nt
 
 
 class CopyBlendShapeTool:
@@ -78,7 +79,7 @@ class CopyBlendShapeTool:
             )
         win.show()
 
-    def find_blendshape_info(self, source_mesh: pm.nodetypes.Transform) -> list:
+    def find_blendshape_info(self, source_mesh: nt.Transform) -> list:
         """用于返回给出模型的混合变形信息，包含名称和属性
 
         Args:
@@ -87,26 +88,36 @@ class CopyBlendShapeTool:
         Returns:
             list: 混合变形信息列表
         """
-        source_mesh = pm.selected()[0]
+        if not isinstance(source_mesh, nt.Transform):
+            pm.inViewMessage(
+                amg="Input object is not a valid source mesh...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
         blendshapes = pm.listHistory(source_mesh, type="blendShape")
+        if not blendshapes:
+            pm.inViewMessage(
+                amg="No blendshapes found in the source mesh...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
         # 通过blendshape.listAliases()，获取混合变形信息。
         bs_info_list = []
         for blendshape in blendshapes:
             bs_infos = blendshape.listAliases()
             bs_info_list.extend(bs_infos)
-        # 通过混合变形信息，获取混合变形名称
-        bs_name_list = []
-        for bs_info in bs_info_list:
-            bs_name = bs_info[0]
-            bs_name_list.append(bs_name)
 
         return bs_info_list
 
     def copy_blendshapes(
         self,
-        source_mesh: pm.nodetypes.Transform,
-        target_meshes: list,
-        select_blendshapes: list,
+        source_mesh: nt.Transform,
+        target_meshes: list[nt.Transform],
+        select_blendshapes: list[str],
     ):
         """
         将指定的混合变形从源模型复制到多个目标模型。
@@ -118,7 +129,34 @@ class CopyBlendShapeTool:
         Returns:
             None
         """
+        if not source_mesh:
+            pm.inViewMessage(
+                amg="Please input source mesh...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
         # 选中模型并创建包裹变形器
+        if not target_meshes:
+            pm.inViewMessage(
+                amg="Please input target meshes...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
+        if not select_blendshapes:
+            pm.inViewMessage(
+                amg="Please select blendshapes to copy from...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
         pm.select(target_meshes, replace=1)
         pm.select(source_mesh, toggle=1)
         wrap_node = pm.mel.performCreateWrap(False)
@@ -156,6 +194,14 @@ class CopyBlendShapeTool:
         """
         # 将选中的模型作为源模型添加到UI当中
         source_mesh = pm.selected()[0]
+        if not source_mesh:
+            pm.inViewMessage(
+                amg="Please select source mesh to input...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
         pm.textField(self.source_mesh_field, e=True, text=source_mesh)
         # 将该模型的混合变形名称添加到UI当中
         bs_info_list = self.find_blendshape_info(
@@ -180,6 +226,14 @@ class CopyBlendShapeTool:
         pm.textScrollList(self.target_meshes_field, e=True, removeAll=True)
         # 遍历目标名称并添加至UI当中
         target_meshes = pm.selected()
+        if not target_meshes:
+            pm.inViewMessage(
+                amg="Please select target mesh to input...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
         for target_mesh in target_meshes:
             pm.textScrollList(self.target_meshes_field, e=True, append=target_mesh)
 
@@ -188,13 +242,39 @@ class CopyBlendShapeTool:
         将选中的源模型混合变形复制到目标模型。
         """
         self.source_mesh = pm.textField(self.source_mesh_field, q=True, text=True)
+        if not self.source_mesh:
+            pm.inViewMessage(
+                amg="Please input source mesh...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
         self.target_meshes = pm.textScrollList(
             self.target_meshes_field, q=True, allItems=True
         )
+        if not self.target_meshes:
+            pm.inViewMessage(
+                amg="Please input target meshes...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
         self.select_blendshapes = pm.textScrollList(
             self.blendshape_field, q=True, selectItem=True
         )
-
+        if not self.select_blendshapes:
+            pm.inViewMessage(
+                amg="Please select blendshapes...",
+                alpha=0.5,
+                dragKill=True,
+                pos="midCenterTop",
+                fade=True,
+            )
+            return
         self.copy_blendshapes(
             self.source_mesh, self.target_meshes, self.select_blendshapes
         )
