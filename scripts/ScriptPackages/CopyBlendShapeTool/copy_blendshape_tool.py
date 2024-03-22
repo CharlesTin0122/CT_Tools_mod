@@ -6,6 +6,7 @@
 @Contact       : tianchao0533@163.com
 @Software      : Maya 2024.2
 @PythonVersion : python 3.10.8
+@librarys      : pymel 1.4.0
 @Description   :copy blendshape from source to target
 """
 import pymel.core as pm
