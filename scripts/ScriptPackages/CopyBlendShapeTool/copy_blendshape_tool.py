@@ -125,19 +125,18 @@ class CopyBlendShapeTool:
         # wrap_node = pm.cmds.CreateWrap()
         # 获取源模型混合变形信息
         bs_info_list = self.find_blendshape_info(source_mesh)
+        bs_info_dict = {bs_info[0]: bs_info[1] for bs_info in bs_info_list}
         # 遍历目标模型生成混合变形所需的目标模型，并进行混合变形
         for target_mesh in target_meshes:  # 遍历目标模型
             bs_group = []
             for bs_name in select_blendshapes:  # 遍历指定的混合变形
-                for bs_info in bs_info_list:  # 遍历混合变形信息
-                    if bs_name == bs_info[0]:  # 如果指定的混合变形在混合变形信息中
-                        bs_info[1].set(1)  # 则将该混合变形属性设置为1
-                        # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
-                        bs_mesh = pm.duplicate(target_mesh)[0]
-                        bs_mesh.rename(bs_name)
-                        bs_group.append(bs_mesh)
-                        # 将该混合变形属性设置为0，返回未变形状态。
-                        bs_info[1].set(0)
+                bs_info_dict[bs_name].set(1)  # 将该混合变形属性设置为1
+                # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
+                bs_mesh = pm.duplicate(target_mesh)[0]
+                bs_mesh.rename(bs_name)
+                bs_group.append(bs_mesh)
+                # 将该混合变形属性设置为0，返回未变形状态。
+                bs_info_dict[bs_name].set(0)
             pm.blendShape(bs_group, target_mesh)  # 创建混合变形
             # 重命名生成的混合变形所需的目标模型,并将其打组隐藏
             for mesh in bs_group:

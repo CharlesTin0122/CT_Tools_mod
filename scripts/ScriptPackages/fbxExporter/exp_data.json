@@ -1,12 +1,27 @@
 {
     "file_list": [
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_down.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop_left.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_loop_right.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_speed_up.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_speed_up_loop.mb",
-        "D:/Work/Animation/fly_with_sword/male/Anim_Human_fly_up.mb"
+        "D:/Work/Animation/Emot/TrendyDance/01_HaidilaoDance.mb",
+        "D:/Work/Animation/Emot/TrendyDance/02_MissingYou.mb",
+        "D:/Work/Animation/Emot/TrendyDance/03_BowChikaWowWow.mb",
+        "D:/Work/Animation/Emot/TrendyDance/04_DevilChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/05_BooyWurkChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/06_DontStopChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/07_2000s2010sThrowbacks.mb",
+        "D:/Work/Animation/Emot/TrendyDance/08_BollywoodDanceShavaShava.mb",
+        "D:/Work/Animation/Emot/TrendyDance/09_BoomBoomChallenge_01.mb",
+        "D:/Work/Animation/Emot/TrendyDance/10_BoomBoomChallenge_02.mb",
+        "D:/Work/Animation/Emot/TrendyDance/11_CrankItUp.mb",
+        "D:/Work/Animation/Emot/TrendyDance/12_FireBallChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/13_HoldUp.mb",
+        "D:/Work/Animation/Emot/TrendyDance/14_MJDance.mb",
+        "D:/Work/Animation/Emot/TrendyDance/15_MoonWalk.mb",
+        "D:/Work/Animation/Emot/TrendyDance/16_IfIWasYouChallengeV1.mb",
+        "D:/Work/Animation/Emot/TrendyDance/17_RunningManChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/18_CakeChallenge.mb",
+        "D:/Work/Animation/Emot/TrendyDance/19_DrakeMeme.mb",
+        "D:/Work/Animation/Emot/TrendyDance/20_SlickBack.mb",
+        "D:/Work/Animation/Emot/TrendyDance/23_ThisHitThatIceColdChallenge_female.mb",
+        "D:/Work/Animation/Emot/TrendyDance/24_ThisHitThatIceColdChallenge_male.mb"
     ],
     "jnt_list": [
         "skin:root",
@@ -882,5 +897,5 @@
         "skin:ik_hand_r.sy",
         "skin:ik_hand_r.sz"
     ],
-    "export_path": "D:/Work/Animation/fly_with_sword/export"
+    "export_path": "D:/Work/Animation/Emot/TrendyDance/export"
 }
