@@ -18,7 +18,7 @@ class CopyBlendShapeTool:
     Typically used to copy blendshapes from a body mesh to a clothing mesh.
     """
 
-    def init(self):
+    def __init__(self):
         """构建函数"""
         self.source_mesh_field = None
         self.blendshape_field = None
