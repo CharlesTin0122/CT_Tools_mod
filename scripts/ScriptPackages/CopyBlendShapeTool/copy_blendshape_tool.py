@@ -182,7 +182,7 @@ class CopyBlendShapeTool:
                 pm.rename(mesh, newname=f"{target_mesh}_{mesh}")
             target_grp = pm.group(
                 bs_group, name=f"{target_mesh}_target"
-            )  # 删除生成的混合变形所需的目标模型
+            )
             pm.hide(target_grp)
         # 删除包裹变形器
         for mesh in target_meshes:
