@@ -1,360 +1,370 @@
+from collections import defaultdict
+
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
-import sys
 
-release = cmds.about(version=True)
-version = 2023 if 'Preview' in release else int(cmds.about(version=True))
-numbers = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' }
+# Returns Error Tuple
+#     "uv": {}, [UUID] : [... uvId]
+#     "vertex": {},[UUID] : [... vertexId ]
+#     "edge" : {},[UUID] : [... edgeId ]
+#     "polygon": {}, -> [UUID] : [... polygonId ]
+#     "nodes" : [] -> [... nodes UUIDs]
 
-def trailingNumbers(nodes, SLMesh):
+# Internal Utility Functions
+def _getNodeName(uuid):
+    nodeName = cmds.ls(uuid, uuid=True)
+    if nodeName:
+        return nodeName[0]
+    return None
+
+
+# Functions to be imported
+def trailingNumbers(nodes, _):
     trailingNumbers = []
     for node in nodes:
-        if node[-1] in numbers:
-            trailingNumbers.append(node)
-    return trailingNumbers
+        nodeName = _getNodeName(node)
+        if nodeName and nodeName[-1].isdigit():
+                trailingNumbers.append(node)
+    return "nodes", trailingNumbers
 
-def duplicatedNames(nodes, SLMesh):
-    duplicatedNames = []
+def duplicatedNames(nodes, _):
+    nodesByShortName = defaultdict(list)
     for node in nodes:
-        if '|' in node:
-            duplicatedNames.append(node)
-    return duplicatedNames
+        nodeName = _getNodeName(node)
+        name = nodeName.rsplit('|', 1)[-1]
+        nodesByShortName[name].append(node)
+    invalid = []
+    for name, shortNameNodes in nodesByShortName.items():
+        if len(shortNameNodes) > 1:
+            invalid.extend(shortNameNodes)
+    return "nodes", invalid
 
 
-def namespaces(nodes, SLMesh):
+def namespaces(nodes, _):
     namespaces = []
     for node in nodes:
-        if ':' in node:
+        nodeName = _getNodeName(node)
+        if nodeName and ':' in nodeName:
             namespaces.append(node)
-    return namespaces
+    return "nodes", namespaces
 
 
-def shapeNames(nodes, SLMesh):
+def shapeNames(nodes, _):
     shapeNames = []
     for node in nodes:
-        new = node.split('|')
-        shape = cmds.listRelatives(node, shapes=True)
-        if shape:
-            shapename = new[-1] + "Shape"
-            if shape[0] != shapename:
-                shapeNames.append(node)
-    return shapeNames
+        nodeName = _getNodeName(node)
+        if nodeName:
+            new = nodeName.split('|')
+            shape = cmds.listRelatives(nodeName, shapes=True)
+            if shape:
+                shapename = new[-1] + "Shape"
+                if shape[0] != shapename:
+                    shapeNames.append(node)
+    return "nodes", shapeNames
 
 def triangles(_, SLMesh):
-    triangles = []
+    triangles = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
             numOfEdges = faceIt.getEdges()
             if len(numOfEdges) == 3:
-                faceIndex = faceIt.index()
-                componentName = str(objectName) + '.f[' + str(faceIndex) + ']'
-                triangles.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
-                faceIt.next()
+                triangles[uuid].append(faceIt.index())
+            faceIt.next()
         selIt.next()
-    return triangles
+    return "polygon", triangles
 
 
 def ngons(_, SLMesh):
-    ngons = []
+    ngons = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
             numOfEdges = faceIt.getEdges()
             if len(numOfEdges) > 4:
-                componentName = str(objectName) + '.f[' + str(faceIt.index()) + ']'
-                ngons.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
-                faceIt.next()
+                ngons[uuid].append(faceIt.index())
+            faceIt.next()
         selIt.next()
-    return ngons
+    return "polygon", ngons
 
 def hardEdges(_, SLMesh):
-    hardEdges = []
+    hardEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         edgeIt = om.MItMeshEdge(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not edgeIt.isDone():
-            if edgeIt.isSmooth == False and edgeIt.onBoundary() == False:
-                componentName = str(objectName) + '.e[' + str(edgeIt.index()) + ']'
-                hardEdges.append(componentName)
+            if edgeIt.isSmooth is False and edgeIt.onBoundary() is False:
+                hardEdges[uuid].append(edgeIt.index())
             edgeIt.next()
         selIt.next()
-    return hardEdges
+    return "edge", hardEdges
 
 def lamina(_, SLMesh):
+    lamina = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
-    lamina = []
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
             laminaFaces = faceIt.isLamina()
-            if laminaFaces == True:
-                faceIndex = faceIt.index()
-                componentName = str(objectName) + '.f[' + str(faceIndex) + ']'
-                lamina.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
-                faceIt.next()
+            if laminaFaces is True:
+                lamina[uuid].append(faceIt.index())
+            faceIt.next()
         selIt.next()
-    return lamina
+    return "polygon", lamina
 
 
 def zeroAreaFaces(_, SLMesh):
-    zeroAreaFaces = []
+    zeroAreaFaces = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
             faceArea = faceIt.getArea()
             if faceArea <= 0.00000001:
-                componentName = str(objectName) + '.f[' + str(faceIt.index()) + ']'
-                zeroAreaFaces.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
-                faceIt.next()
+                zeroAreaFaces[uuid].append(faceIt.index())
+            faceIt.next()
         selIt.next()
-    return zeroAreaFaces
+    return "polygon", zeroAreaFaces
 
 
 def zeroLengthEdges(_, SLMesh):
-    zeroLengthEdges = []
+    zeroLengthEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         edgeIt = om.MItMeshEdge(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not edgeIt.isDone():
             if edgeIt.length() <= 0.00000001:
-                componentName = str(objectName) + \
-                    '.f[' + str(edgeIt.index()) + ']'
-                zeroLengthEdges.append(componentName)
+                zeroLengthEdges[uuid].append(edgeIt.index())
             edgeIt.next()
         selIt.next()
-    return zeroLengthEdges
+    return "edge", zeroLengthEdges
 
-
-def selfPenetratingUVs(transformNodes, SLMesh):
-    selfPenetratingUVs = []
+def selfPenetratingUVs(transformNodes, _):
+    selfPenetratingUVs = defaultdict(list)
     for node in transformNodes:
-        shape = cmds.listRelatives(node, shapes=True, fullPath=True)
-        convertToFaces = cmds.ls(
-            cmds.polyListComponentConversion(shape, tf=True), fl=True)
-        overlapping = (cmds.polyUVOverlap(convertToFaces, oc=True))
-        if overlapping:
-            for node in overlapping:
-                selfPenetratingUVs.append(node)
-    return selfPenetratingUVs
-
+        nodeName = _getNodeName(node)
+        shapes = cmds.listRelatives(
+            nodeName,
+            shapes=True,
+            type="mesh",
+            noIntermediate=True)
+        if shapes:
+            overlapping = cmds.polyUVOverlap("{}.f[*]".format(shapes[0]), oc=True)
+            if overlapping:
+                formatted = [ overlap.split("{}.f[".format(shapes[0]))[1][:-1] for overlap in overlapping ]
+                selfPenetratingUVs[node].extend(formatted)
+    return "polygon", selfPenetratingUVs
 
 def noneManifoldEdges(_, SLMesh):
-    noneManifoldEdges = []
+    noneManifoldEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         edgeIt = om.MItMeshEdge(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not edgeIt.isDone():
             if edgeIt.numConnectedFaces() > 2:
-                componentName = str(objectName) + '.e[' + str(edgeIt.index()) + ']'
-                noneManifoldEdges.append(componentName)
+                noneManifoldEdges[uuid].append(edgeIt.index())
             edgeIt.next()
         selIt.next()
-    return noneManifoldEdges
+    return "edge", noneManifoldEdges
 
 
 def openEdges(_, SLMesh):
-    openEdges = []
+    openEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         edgeIt = om.MItMeshEdge(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not edgeIt.isDone():
             if edgeIt.numConnectedFaces() < 2:
-                componentName = str(objectName) + '.e[' + str(edgeIt.index()) + ']'
-                openEdges.append(componentName)
+                openEdges[uuid].append(edgeIt.index())
             edgeIt.next()
         selIt.next()
-    return openEdges
+    return "edge", openEdges
 
 
 def poles(_, SLMesh):
-    poles = []
+    poles = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         vertexIt = om.MItMeshVertex(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not vertexIt.isDone():
             if vertexIt.numConnectedEdges() > 5:
-                componentName = str(objectName) + \
-                    '.vtx[' + str(vertexIt.index()) + ']'
-                poles.append(componentName)
+                poles[uuid].append(vertexIt.index())
             vertexIt.next()
         selIt.next()
-    return poles
+    return "vertex", poles
 
 
 def starlike(_, SLMesh):
-    starlike = []
+    noneStarlike = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         polyIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not polyIt.isDone():
-            if polyIt.isStarlike() == False:
-                componentName = str(objectName) + \
-                    '.f[' + str(polyIt.index()) + ']'
-                starlike.append(componentName)
-            if version < 2020:
-                polyIt.next(None)
-            else:
-                polyIt.next()
+            if polyIt.isStarlike() is False:
+                noneStarlike[uuid].append(polyIt.index())
+            polyIt.next()
         selIt.next()
-    return starlike
+    return "polygon", noneStarlike
 
 def missingUVs(_, SLMesh):
-    missingUVs = []
+    missingUVs = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
-            if faceIt.hasUVs() == False:
-                componentName = str(objectName) + \
-                    '.f[' + str(faceIt.index()) + ']'
-                missingUVs.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
-                faceIt.next()
+            if faceIt.hasUVs() is False:
+                missingUVs[uuid].append(faceIt.index())
+            faceIt.next()
         selIt.next()
-    return missingUVs
+    return "polygon", missingUVs
 
 def uvRange(_, SLMesh):
-    uvRange = []
+    uvRange = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
-    mesh = om.MFnMesh(selIt.getDagPath())
-    objectName = selIt.getDagPath().getPath()
-    Us, Vs = mesh.getUVs()
-    for i in range(len(Us)):
-        if Us[i] < 0 or Us[i] > 10 or Vs[i] < 0:
-            componentName = str(objectName) + '.map[' + str(i) + ']'
-            uvRange.append(componentName)
-    return uvRange
+    while not selIt.isDone():
+        mesh = om.MFnMesh(selIt.getDagPath())
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
+        Us, Vs = mesh.getUVs()
+        for i in range(len(Us)):
+            if Us[i] < 0 or Us[i] > 10 or Vs[i] < 0:
+                uvRange[uuid].append(i)
+        selIt.next()
+    return "uv", uvRange
 
 def onBorder(_, SLMesh):
-    onBorder = []
+    onBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
-    mesh = om.MFnMesh(selIt.getDagPath())
-    objectName = selIt.getDagPath().getPath()
-    Us, Vs = mesh.getUVs()
-    for i in range(len(Us)):
-        if abs(int(Us[i]) - Us[i]) < 0.00001 or abs(int(Vs[i]) - Vs[i]) < 0.00001:
-            componentName = str(objectName) + '.map[' + str(i) + ']'
-            onBorder.append(componentName)
-    return onBorder
+    while not selIt.isDone():
+        mesh = om.MFnMesh(selIt.getDagPath())
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
+        Us, Vs = mesh.getUVs()
+        for i in range(len(Us)):
+            if abs(int(Us[i]) - Us[i]) < 0.00001 or abs(int(Vs[i]) - Vs[i]) < 0.00001:
+                onBorder[uuid].append(i)
+        selIt.next()
+    return "uv", onBorder
 
 def crossBorder(_, SLMesh):
-    crossBorder = []
+    crossBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
         faceIt = om.MItMeshPolygon(selIt.getDagPath())
-        objectName = selIt.getDagPath().getPath()
+        fn = om.MFnDependencyNode(selIt.getDagPath().node())
+        uuid = fn.uuid().asString()
         while not faceIt.isDone():
             U, V = set(), set()
-            UVs = faceIt.getUVs()
-            Us, Vs, = UVs[0], UVs[1]
-            for i in range(len(Us)):
-                u_add = int(Us[i]) if Us[i] > 0 else int(Us[i]) - 1
-                v_add = int(Vs[i]) if Vs[i] > 0 else int(Vs[i]) - 1
-                U.add(u_add)
-                V.add(v_add)
-            if len(U) > 1 or len(V) > 1:
-                componentName = str(objectName) + '.f[' + str(faceIt.index()) + ']'
-                crossBorder.append(componentName)
-            if version < 2020:
-                faceIt.next(None)
-            else:
+            try:
+                UVs = faceIt.getUVs()
+                Us, Vs, = UVs[0], UVs[1]
+                for i in range(len(Us)):
+                    uAdd = int(Us[i]) if Us[i] > 0 else int(Us[i]) - 1
+                    vAdd = int(Vs[i]) if Vs[i] > 0 else int(Vs[i]) - 1
+                    U.add(uAdd)
+                    V.add(vAdd)
+                if len(U) > 1 or len(V) > 1:
+                    crossBorder[uuid].append(faceIt.index())
+                faceIt.next()
+            except:
+                cmds.warning("Face " + str(faceIt.index()) + " has no UVs")
                 faceIt.next()
         selIt.next()
-    return crossBorder
+    return "polygon", crossBorder
 
-def unfrozenTransforms(nodes, SLMesh):
+def unfrozenTransforms(nodes, _):
     unfrozenTransforms = []
     for node in nodes:
+        nodeName = _getNodeName(node)
         translation = cmds.xform(
-            node, q=True, worldSpace=True, translation=True)
-        rotation = cmds.xform(node, q=True, worldSpace=True, rotation=True)
-        scale = cmds.xform(node, q=True, worldSpace=True, scale=True)
+            nodeName, q=True, worldSpace=True, translation=True)
+        rotation = cmds.xform(nodeName, q=True, worldSpace=True, rotation=True)
+        scale = cmds.xform(nodeName, q=True, worldSpace=True, scale=True)
         if translation != [0.0, 0.0, 0.0] or rotation != [0.0, 0.0, 0.0] or scale != [1.0, 1.0, 1.0]:
             unfrozenTransforms.append(node)
-    return unfrozenTransforms
+    return "nodes", unfrozenTransforms
 
 def layers(nodes, _):
     layers = []
     for node in nodes:
-        layer = cmds.listConnections(node, type="displayLayer")
+        nodeName = _getNodeName(node)
+        layer = cmds.listConnections(nodeName, type="displayLayer")
         if layer:
             layers.append(node)
-    return layers
+    return "nodes", layers
 
 def shaders(transformNodes, _):
     shaders = []
     for node in transformNodes:
-        shape = cmds.listRelatives(node, shapes=True, fullPath=True)
+        nodeName = _getNodeName(node)
+        shape = cmds.listRelatives(nodeName, shapes=True, fullPath=True)
         if cmds.nodeType(shape) == 'mesh' and shape:
             shadingGrps = cmds.listConnections(shape, type='shadingEngine')
             if shadingGrps[0] != 'initialShadingGroup':
                 shaders.append(node)
-    return shaders
+    return "nodes", shaders
 
-def history(nodes, SLMesh):
+def history(nodes, _):
     history = []
     for node in nodes:
-        shape = cmds.listRelatives(node, shapes=True, fullPath=True)
+        nodeName = _getNodeName(node)
+        shape = cmds.listRelatives(nodeName, shapes=True, fullPath=True)
         if shape and cmds.nodeType(shape[0]) == 'mesh':
             historySize = len(cmds.listHistory(shape))
             if historySize > 1:
                 history.append(node)
-    return history
+    return "nodes", history
 
-def uncenteredPivots(nodes, SLMesh):
+def uncenteredPivots(nodes, _):
     uncenteredPivots = []
     for node in nodes:
-        if cmds.xform(node, q=1, ws=1, rp=1) != [0, 0, 0]:
+        nodeName = _getNodeName(node)
+        if cmds.xform(nodeName, q=1, ws=1, rp=1) != [0, 0, 0]:
             uncenteredPivots.append(node)
-    return uncenteredPivots
+    return "nodes", uncenteredPivots
 
 
-def emptyGroups(nodes, SLMesh):
+def emptyGroups(nodes, _):
     emptyGroups = []
     for node in nodes:
-        children = cmds.listRelatives(node, ad=True)
-        if not children:
+        nodeName = _getNodeName(node)
+        if not cmds.listRelatives(nodeName, ad=True):
             emptyGroups.append(node)
-    return emptyGroups
+    return "nodes", emptyGroups
 
-
-def parentGeometry(transformNodes, SLMesh):
+def parentGeometry(transformNodes, _):
     parentGeometry = []
     for node in transformNodes:
-        parents = cmds.listRelatives(node, p=True, fullPath=True)
+        nodeName = _getNodeName(node)
+        parents = cmds.listRelatives(nodeName, p=True, fullPath=True)
         if parents:
             for parent in parents:
                 children = cmds.listRelatives(parent, fullPath=True)
-                for parent in children:
-                    if cmds.nodeType(parent) == 'mesh':
+                for child in children:
+                    if cmds.nodeType(child) == 'mesh':
                         parentGeometry.append(node)
-    return parentGeometry
+    return "nodes", parentGeometry
