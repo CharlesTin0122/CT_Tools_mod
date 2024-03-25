@@ -164,6 +164,7 @@ class CopyBlendShapeTool:
         # wrap_node = pm.cmds.CreateWrap()
         # 获取源模型混合变形信息
         bs_info_list = self.find_blendshape_info(source_mesh)
+        # 通过推导式生成字典，形式为{变形名称：变形属性,...}
         bs_info_dict = {bs_info[0]: bs_info[1] for bs_info in bs_info_list}
         # 遍历目标模型生成混合变形所需的目标模型，并进行混合变形
         for target_mesh in target_meshes:  # 遍历目标模型
