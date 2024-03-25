@@ -10,6 +10,7 @@ import maya.api.OpenMaya as om
 #     "polygon": {}, -> [UUID] : [... polygonId ]
 #     "nodes" : [] -> [... nodes UUIDs]
 
+
 # Internal Utility Functions
 def _getNodeName(uuid):
     nodeName = cmds.ls(uuid, uuid=True)
@@ -24,14 +25,15 @@ def trailingNumbers(nodes, _):
     for node in nodes:
         nodeName = _getNodeName(node)
         if nodeName and nodeName[-1].isdigit():
-                trailingNumbers.append(node)
+            trailingNumbers.append(node)
     return "nodes", trailingNumbers
+
 
 def duplicatedNames(nodes, _):
     nodesByShortName = defaultdict(list)
     for node in nodes:
         nodeName = _getNodeName(node)
-        name = nodeName.rsplit('|', 1)[-1]
+        name = nodeName.rsplit("|", 1)[-1]
         nodesByShortName[name].append(node)
     invalid = []
     for name, shortNameNodes in nodesByShortName.items():
@@ -44,7 +46,7 @@ def namespaces(nodes, _):
     namespaces = []
     for node in nodes:
         nodeName = _getNodeName(node)
-        if nodeName and ':' in nodeName:
+        if nodeName and ":" in nodeName:
             namespaces.append(node)
     return "nodes", namespaces
 
@@ -54,13 +56,14 @@ def shapeNames(nodes, _):
     for node in nodes:
         nodeName = _getNodeName(node)
         if nodeName:
-            new = nodeName.split('|')
+            new = nodeName.split("|")
             shape = cmds.listRelatives(nodeName, shapes=True)
             if shape:
                 shapename = new[-1] + "Shape"
                 if shape[0] != shapename:
                     shapeNames.append(node)
     return "nodes", shapeNames
+
 
 def triangles(_, SLMesh):
     triangles = defaultdict(list)
@@ -93,6 +96,7 @@ def ngons(_, SLMesh):
         selIt.next()
     return "polygon", ngons
 
+
 def hardEdges(_, SLMesh):
     hardEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
@@ -106,6 +110,7 @@ def hardEdges(_, SLMesh):
             edgeIt.next()
         selIt.next()
     return "edge", hardEdges
+
 
 def lamina(_, SLMesh):
     lamina = defaultdict(list)
@@ -153,21 +158,24 @@ def zeroLengthEdges(_, SLMesh):
         selIt.next()
     return "edge", zeroLengthEdges
 
+
 def selfPenetratingUVs(transformNodes, _):
     selfPenetratingUVs = defaultdict(list)
     for node in transformNodes:
         nodeName = _getNodeName(node)
         shapes = cmds.listRelatives(
-            nodeName,
-            shapes=True,
-            type="mesh",
-            noIntermediate=True)
+            nodeName, shapes=True, type="mesh", noIntermediate=True
+        )
         if shapes:
             overlapping = cmds.polyUVOverlap("{}.f[*]".format(shapes[0]), oc=True)
             if overlapping:
-                formatted = [ overlap.split("{}.f[".format(shapes[0]))[1][:-1] for overlap in overlapping ]
+                formatted = [
+                    overlap.split("{}.f[".format(shapes[0]))[1][:-1]
+                    for overlap in overlapping
+                ]
                 selfPenetratingUVs[node].extend(formatted)
     return "polygon", selfPenetratingUVs
+
 
 def noneManifoldEdges(_, SLMesh):
     noneManifoldEdges = defaultdict(list)
@@ -228,6 +236,7 @@ def starlike(_, SLMesh):
         selIt.next()
     return "polygon", noneStarlike
 
+
 def missingUVs(_, SLMesh):
     missingUVs = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
@@ -241,6 +250,7 @@ def missingUVs(_, SLMesh):
             faceIt.next()
         selIt.next()
     return "polygon", missingUVs
+
 
 def uvRange(_, SLMesh):
     uvRange = defaultdict(list)
@@ -256,6 +266,7 @@ def uvRange(_, SLMesh):
         selIt.next()
     return "uv", uvRange
 
+
 def onBorder(_, SLMesh):
     onBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
@@ -270,6 +281,7 @@ def onBorder(_, SLMesh):
         selIt.next()
     return "uv", onBorder
 
+
 def crossBorder(_, SLMesh):
     crossBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
@@ -281,7 +293,13 @@ def crossBorder(_, SLMesh):
             U, V = set(), set()
             try:
                 UVs = faceIt.getUVs()
-                Us, Vs, = UVs[0], UVs[1]
+                (
+                    Us,
+                    Vs,
+                ) = (
+                    UVs[0],
+                    UVs[1],
+                )
                 for i in range(len(Us)):
                     uAdd = int(Us[i]) if Us[i] > 0 else int(Us[i]) - 1
                     vAdd = int(Vs[i]) if Vs[i] > 0 else int(Vs[i]) - 1
@@ -296,17 +314,22 @@ def crossBorder(_, SLMesh):
         selIt.next()
     return "polygon", crossBorder
 
+
 def unfrozenTransforms(nodes, _):
     unfrozenTransforms = []
     for node in nodes:
         nodeName = _getNodeName(node)
-        translation = cmds.xform(
-            nodeName, q=True, worldSpace=True, translation=True)
+        translation = cmds.xform(nodeName, q=True, worldSpace=True, translation=True)
         rotation = cmds.xform(nodeName, q=True, worldSpace=True, rotation=True)
         scale = cmds.xform(nodeName, q=True, worldSpace=True, scale=True)
-        if translation != [0.0, 0.0, 0.0] or rotation != [0.0, 0.0, 0.0] or scale != [1.0, 1.0, 1.0]:
+        if (
+            translation != [0.0, 0.0, 0.0]
+            or rotation != [0.0, 0.0, 0.0]
+            or scale != [1.0, 1.0, 1.0]
+        ):
             unfrozenTransforms.append(node)
     return "nodes", unfrozenTransforms
+
 
 def layers(nodes, _):
     layers = []
@@ -317,27 +340,30 @@ def layers(nodes, _):
             layers.append(node)
     return "nodes", layers
 
+
 def shaders(transformNodes, _):
     shaders = []
     for node in transformNodes:
         nodeName = _getNodeName(node)
         shape = cmds.listRelatives(nodeName, shapes=True, fullPath=True)
-        if cmds.nodeType(shape) == 'mesh' and shape:
-            shadingGrps = cmds.listConnections(shape, type='shadingEngine')
-            if shadingGrps[0] != 'initialShadingGroup':
+        if cmds.nodeType(shape) == "mesh" and shape:
+            shadingGrps = cmds.listConnections(shape, type="shadingEngine")
+            if shadingGrps[0] != "initialShadingGroup":
                 shaders.append(node)
     return "nodes", shaders
+
 
 def history(nodes, _):
     history = []
     for node in nodes:
         nodeName = _getNodeName(node)
         shape = cmds.listRelatives(nodeName, shapes=True, fullPath=True)
-        if shape and cmds.nodeType(shape[0]) == 'mesh':
+        if shape and cmds.nodeType(shape[0]) == "mesh":
             historySize = len(cmds.listHistory(shape))
             if historySize > 1:
                 history.append(node)
     return "nodes", history
+
 
 def uncenteredPivots(nodes, _):
     uncenteredPivots = []
@@ -356,6 +382,7 @@ def emptyGroups(nodes, _):
             emptyGroups.append(node)
     return "nodes", emptyGroups
 
+
 def parentGeometry(transformNodes, _):
     parentGeometry = []
     for node in transformNodes:
@@ -365,6 +392,6 @@ def parentGeometry(transformNodes, _):
             for parent in parents:
                 children = cmds.listRelatives(parent, fullPath=True)
                 for child in children:
-                    if cmds.nodeType(child) == 'mesh':
+                    if cmds.nodeType(child) == "mesh":
                         parentGeometry.append(node)
     return "nodes", parentGeometry
