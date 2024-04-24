@@ -106,20 +106,57 @@ class AnimCurveFilter:
         pm.showWindow(main_window)
 
     def switch_filter(self, filter_type, *args):
+        """
+        Switches the filter based on the given filter type.
+
+        Parameters:
+            filter_type (str): The type of filter to switch to.
+            *args: Additional arguments to pass to the filter function.
+
+        Returns:
+            None
+        """
         self.default_value = self.FILTER_TYPES[filter_type]["default_value"]
         self.update_slider_args(self.FILTER_TYPES[filter_type]["args"])
 
     def update_slider_args(self, args):
+        """
+        Updates the arguments of the float slider button group with the given dictionary of key-value pairs.
+
+        Parameters:
+            args (dict): A dictionary containing the key-value pairs to update the slider button group.
+
+        Returns:
+            None
+        """
         for key, value in args.items():
             pm.floatSliderButtonGrp(self.value_slider, edit=True, **{key: value})
 
     def filter_drag_command(self, *args):
+        """
+        Executes the filter function based on the selected filter type.
+
+        Parameters:
+            *args: Additional arguments to be passed to the filter function.
+
+        Returns:
+            None
+        """
         filter_type = pm.radioCollection(self.filter_radioCol, query=True, select=True)
         if filter_type:
             filter_func = getattr(self, self.FILTER_TYPES[filter_type]["func"])
             filter_func()
 
     def get_keyframe_data(self, *args):
+        """
+        Retrieves keyframe data for selected objects.
+        
+        Parameters:
+            *args: Additional arguments (not used in the current implementation).
+        
+        Returns:
+            Tuple containing lists of attribute names, time values, and key values.
+        """
         key_value_list = []
         time_value_list = []
         attr_list = []
