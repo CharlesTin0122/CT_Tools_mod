@@ -7,10 +7,12 @@
 @Software      : Maya 2023.3
 @PythonVersion : python 3.9.7
 """
+
 import os
 import pymel.core as pm
+
 # 导入fbx SDK包裹模块 位置在"D:\Backup\Documents\maya\scripts\fbx_wrap.py"
-import fbx_wrap
+# import fbx_wrap
 # 导入mgear动画工具模块，用于批量FK转IK
 from mgear.core import anim_utils
 
@@ -265,13 +267,13 @@ class AdvAnimToolsUI:
                 pm.parentConstraint(
                     joint_sl[i], ctrl_sl[i], mo=True, skipTranslate=["x", "y", "z"]
                 )
-            # 通过使用fbxSDK移除fbx文件中的namespace
-            fbx_file = fbx_wrap.FBX_Class(fbxPath)
-            try:
-                fbx_file.remove_namespace()
-                fbx_file.save()
-            except Exception as e:
-                print(e)
+            # # 通过使用fbxSDK移除fbx文件中的namespace
+            # fbx_file = fbx_wrap.FBX_Class(fbxPath)
+            # try:
+            #     fbx_file.remove_namespace()
+            #     fbx_file.save()
+            # except Exception as e:
+            #     print(e)
             # 执行导入文件
             pm.importFile(fbxPath, defaultNamespace=True)
             # 确定时间范围
