@@ -101,8 +101,8 @@ class FbxExporterUI:
             "everyBakeAttr": self.everyBakeAttr,
             "export_path": self.exportPath,
         }
-        current_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(current_path, "exp_data.json")
+        script_path = pm.internalVar(userScriptDir=True)
+        json_file = os.path.join(script_path, "exp_data.json")
         with open(json_file, "w") as d:
             json.dump(self.exp_data, d, indent=4)
 
@@ -119,8 +119,8 @@ class FbxExporterUI:
             return
 
         self.write_json()
-        current_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(current_path, "exp_data.json")
+        script_path = rf"{os.path.dirname(__file__)}"
+        json_file = os.path.join(script_path, "exp_data.json")
         with open(json_file, "r") as r:
             exp_data = json.load(r)
 

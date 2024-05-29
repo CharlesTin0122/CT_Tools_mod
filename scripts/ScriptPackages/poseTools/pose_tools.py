@@ -60,15 +60,15 @@ class PoseToolsUI:
     # 引入Jason文件
     def write_json(self, json_data: dict, json_name: str):
         """将导出信息写入json文件"""
-        current_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(current_path, f"{json_name}.json")
+        script_path = pm.internalVar(userScriptDir=True)
+        json_file = os.path.join(script_path, f"{json_name}.json")
         with open(json_file, "w") as d:
             json.dump(json_data, d, indent=4)
 
     def read_json(self, json_name: str):
         """读取json文件"""
-        current_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(current_path, f"{json_name}.json")
+        script_path = pm.internalVar(userScriptDir=True)
+        json_file = os.path.join(script_path, f"{json_name}.json")
         with open(json_file, "r") as r:
             self.json_data = json.load(r)
         return self.json_data
