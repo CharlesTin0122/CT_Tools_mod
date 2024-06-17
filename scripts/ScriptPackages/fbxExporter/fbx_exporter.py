@@ -26,6 +26,7 @@ class FbxExporterUI:
         self.window = None
         self.slyFile = None
         self.slyOBJ = None
+        self.json_file = None
 
     def show(self):
         """创建UI"""
@@ -102,8 +103,8 @@ class FbxExporterUI:
             "export_path": self.exportPath,
         }
         script_path = pm.internalVar(userScriptDir=True)
-        json_file = os.path.join(script_path, "exp_data.json")
-        with open(json_file, "w") as d:
+        self.json_file = os.path.join(script_path, "exp_data.json")
+        with open(self.json_file, "w") as d:
             json.dump(self.exp_data, d, indent=4)
 
     def export_all(self, *args):
@@ -119,9 +120,8 @@ class FbxExporterUI:
             return
 
         self.write_json()
-        script_path = rf"{os.path.dirname(__file__)}"
-        json_file = os.path.join(script_path, "exp_data.json")
-        with open(json_file, "r") as r:
+
+        with open(self.json_file, "r") as r:
             exp_data = json.load(r)
 
         for f in exp_data["file_list"]:
