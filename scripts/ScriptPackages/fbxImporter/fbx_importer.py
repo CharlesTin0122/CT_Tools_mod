@@ -10,11 +10,123 @@
 
 import os
 import pymel.core as pm
-
-# 导入fbx SDK包裹模块 位置在"D:\Backup\Documents\maya\scripts\fbx_wrap.py"
-# import fbx_wrap
-# 导入mgear动画工具模块，用于批量FK转IK
 from mgear.core import anim_utils
+
+# 常量定义
+FKIK_ATTRS = [
+    "armUI_L0_ctl.arm_blend",
+    "armUI_R0_ctl.arm_blend",
+    "legUI_L0_ctl.leg_blend",
+    "legUI_R0_ctl.leg_blend",
+]
+
+JOINT_SL = [
+    "spine_01",
+    "spine_02",
+    "spine_03",
+    "neck_01",
+    "head",
+    "clavicle_l",
+    "upperarm_l",
+    "lowerarm_l",
+    "hand_l",
+    "thumb_01_l",
+    "thumb_02_l",
+    "thumb_03_l",
+    "index_01_l",
+    "index_02_l",
+    "index_03_l",
+    "middle_01_l",
+    "middle_02_l",
+    "middle_03_l",
+    "ring_01_l",
+    "ring_02_l",
+    "ring_03_l",
+    "pinky_01_l",
+    "pinky_02_l",
+    "pinky_03_l",
+    "clavicle_r",
+    "upperarm_r",
+    "lowerarm_r",
+    "hand_r",
+    "thumb_01_r",
+    "thumb_02_r",
+    "thumb_03_r",
+    "index_01_r",
+    "index_02_r",
+    "index_03_r",
+    "middle_01_r",
+    "middle_02_r",
+    "middle_03_r",
+    "ring_01_r",
+    "ring_02_r",
+    "ring_03_r",
+    "pinky_01_r",
+    "pinky_02_r",
+    "pinky_03_r",
+    "thigh_l",
+    "calf_l",
+    "foot_l",
+    "ball_l",
+    "thigh_r",
+    "calf_r",
+    "foot_r",
+    "ball_r",
+]
+
+CTRL_SL = [
+    "spine_C0_fk0_ctl",
+    "spine_C0_fk1_ctl",
+    "spine_C0_fk2_ctl",
+    "neck_C0_fk0_ctl",
+    "neck_C0_head_ctl",
+    "clavicle_L0_ctl",
+    "arm_L0_fk0_ctl",
+    "arm_L0_fk1_ctl",
+    "arm_L0_fk2_ctl",
+    "thumb_L0_fk0_ctl",
+    "thumb_L0_fk1_ctl",
+    "thumb_L0_fk2_ctl",
+    "index_L0_fk0_ctl",
+    "index_L0_fk1_ctl",
+    "index_L0_fk2_ctl",
+    "middle_L0_fk0_ctl",
+    "middle_L0_fk1_ctl",
+    "middle_L0_fk2_ctl",
+    "ring_L0_fk0_ctl",
+    "ring_L0_fk1_ctl",
+    "ring_L0_fk2_ctl",
+    "pinky_L0_fk0_ctl",
+    "pinky_L0_fk1_ctl",
+    "pinky_L0_fk2_ctl",
+    "clavicle_R0_ctl",
+    "arm_R0_fk0_ctl",
+    "arm_R0_fk1_ctl",
+    "arm_R0_fk2_ctl",
+    "thumb_R0_fk0_ctl",
+    "thumb_R0_fk1_ctl",
+    "thumb_R0_fk2_ctl",
+    "index_R0_fk0_ctl",
+    "index_R0_fk1_ctl",
+    "index_R0_fk2_ctl",
+    "middle_R0_fk0_ctl",
+    "middle_R0_fk1_ctl",
+    "middle_R0_fk2_ctl",
+    "ring_R0_fk0_ctl",
+    "ring_R0_fk1_ctl",
+    "ring_R0_fk2_ctl",
+    "pinky_R0_fk0_ctl",
+    "pinky_R0_fk1_ctl",
+    "pinky_R0_fk2_ctl",
+    "leg_L0_fk0_ctl",
+    "leg_L0_fk1_ctl",
+    "leg_L0_fk2_ctl",
+    "foot_L0_fk0_ctl",
+    "leg_R0_fk0_ctl",
+    "leg_R0_fk1_ctl",
+    "leg_R0_fk2_ctl",
+    "foot_R0_fk0_ctl",
+]
 
 
 class AdvAnimToolsUI:
@@ -82,201 +194,64 @@ class AdvAnimToolsUI:
             self.savePath = save_path[0]
             pm.textField(self.path_field, e=True, text=self.savePath)
 
-    def deleteConnection(self, plug):
-        """
-        移除给出属性接口的链接（删除动画）
-        Parameters:
-            plug (str): The plug to delete the connection for.
-        Returns:
-            None
-        """
-        # 如果接口是连接的目标，则返回 true，否则返回 false。参数isDestination：是连接目标
+    def delete_connection(self, plug):
+        """移除给出属性接口的链接（删除动画）"""
         if pm.connectionInfo(plug, isDestination=True):
-            # 获取确切目标接口，如果没有这样的连接，则返回None。
             plug = pm.connectionInfo(plug, getExactDestination=True)
             readOnly = pm.ls(plug, readOnly=True)
-            # 如果该属性为只读
             if readOnly:
-                # 获取连接的源接口
                 source = pm.connectionInfo(plug, sourceFromDestination=True)
-                # 断开源接口和目标接口
                 pm.disconnectAttr(source, plug)
             else:
-                # 如果不为只读，则删除目标接口
-                # inputConnectionsAndNodes: 如果目标接口为只读，则不会删除
                 pm.delete(plug, inputConnectionsAndNodes=True)
+
+    def reset_controllers(self):
+        """删除动画并重置控制器位置"""
+        for ctrl in self.all_ctrls:
+            keyable_attrs = pm.listAttr(ctrl, keyable=True)
+            animatable_attrs = pm.listAnimatable(ctrl)
+            for attr in animatable_attrs:
+                self.delete_connection(f"{attr}")
+            anim_utils.reset_selected_channels_value([ctrl], keyable_attrs)
+
+    def setup_constraints(self):
+        """创建传递动画骨骼并约束控制器"""
+        pm.duplicate("skin:root")
+        root_jnt = pm.PyNode("root")
+        constraints = pm.ls(root_jnt, dag=True, type="constraint")
+        pm.delete(constraints)
+
+        pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
+        pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
+        pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
+        pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
+
+        for joint, ctrl in zip(JOINT_SL, CTRL_SL):
+            pm.parentConstraint(joint, ctrl, mo=True, skipTranslate=["x", "y", "z"])
 
     def import_and_save(self, *args):
         """执行批量导入"""
-        # 判断是否有导入文件
         if not self.fbxList:
             pm.PopupError("Nothing To Import")
             return
 
         all_ctrl_sets = pm.PyNode("rig_controllers_grp")
         self.all_ctrls = all_ctrl_sets.members()
-        # 遍历导入文件
-        for fbxPath in self.fbxList:
-            # 删除动画并重置控制器位置
-            for ctrl in self.all_ctrls:
-                keyable_attrs = pm.listAttr(ctrl, keyable=True)
-                animatable_attrs = pm.listAnimatable(ctrl)
-                for attr in animatable_attrs:
-                    self.deleteConnection(f"{attr}")
-                anim_utils.reset_selected_channels_value([ctrl], keyable_attrs)
 
-            # 设定帧率
-            pm.currentUnit(time="ntsc")  # 30 fps
+        for fbxPath in self.fbxList:
+            self.reset_controllers()
+            pm.currentUnit(time="ntsc")
             pm.env.setMinTime(0)
             pm.env.setMaxTime(1)
             pm.currentTime(0)
-            # 全部控制器尅帧
             pm.setKeyframe(self.all_ctrls)
-            # 设置绑定手脚为FK模式
-            fkik_attr = [
-                "armUI_L0_ctl.arm_blend",
-                "armUI_R0_ctl.arm_blend",
-                "legUI_L0_ctl.leg_blend",
-                "legUI_R0_ctl.leg_blend",
-            ]
-            for a in fkik_attr:
-                pm.setAttr(a, 0)
 
-            # 创建传递动画骨骼并约束控制器
-            pm.duplicate("skin:root")
-            root_jnt = pm.PyNode("root")
-            constarins = pm.ls(
-                root_jnt, dag=True, type="constraint"
-            )  # 列出骨骼链的所有约束节点，注意参数dag
-            pm.delete(constarins)
+            for attr in FKIK_ATTRS:
+                pm.setAttr(attr, 0)
 
-            pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
-            pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
-            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
-            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
-
-            joint_sl = [
-                "spine_01",
-                "spine_02",
-                "spine_03",
-                "neck_01",
-                "head",
-                "clavicle_l",
-                "upperarm_l",
-                "lowerarm_l",
-                "hand_l",
-                "thumb_01_l",
-                "thumb_02_l",
-                "thumb_03_l",
-                "index_01_l",
-                "index_02_l",
-                "index_03_l",
-                "middle_01_l",
-                "middle_02_l",
-                "middle_03_l",
-                "ring_01_l",
-                "ring_02_l",
-                "ring_03_l",
-                "pinky_01_l",
-                "pinky_02_l",
-                "pinky_03_l",
-                "clavicle_r",
-                "upperarm_r",
-                "lowerarm_r",
-                "hand_r",
-                "thumb_01_r",
-                "thumb_02_r",
-                "thumb_03_r",
-                "index_01_r",
-                "index_02_r",
-                "index_03_r",
-                "middle_01_r",
-                "middle_02_r",
-                "middle_03_r",
-                "ring_01_r",
-                "ring_02_r",
-                "ring_03_r",
-                "pinky_01_r",
-                "pinky_02_r",
-                "pinky_03_r",
-                "thigh_l",
-                "calf_l",
-                "foot_l",
-                "ball_l",
-                "thigh_r",
-                "calf_r",
-                "foot_r",
-                "ball_r",
-            ]
-
-            ctrl_sl = [
-                "spine_C0_fk0_ctl",
-                "spine_C0_fk1_ctl",
-                "spine_C0_fk2_ctl",
-                "neck_C0_fk0_ctl",
-                "neck_C0_head_ctl",
-                "clavicle_L0_ctl",
-                "arm_L0_fk0_ctl",
-                "arm_L0_fk1_ctl",
-                "arm_L0_fk2_ctl",
-                "thumb_L0_fk0_ctl",
-                "thumb_L0_fk1_ctl",
-                "thumb_L0_fk2_ctl",
-                "index_L0_fk0_ctl",
-                "index_L0_fk1_ctl",
-                "index_L0_fk2_ctl",
-                "middle_L0_fk0_ctl",
-                "middle_L0_fk1_ctl",
-                "middle_L0_fk2_ctl",
-                "ring_L0_fk0_ctl",
-                "ring_L0_fk1_ctl",
-                "ring_L0_fk2_ctl",
-                "pinky_L0_fk0_ctl",
-                "pinky_L0_fk1_ctl",
-                "pinky_L0_fk2_ctl",
-                "clavicle_R0_ctl",
-                "arm_R0_fk0_ctl",
-                "arm_R0_fk1_ctl",
-                "arm_R0_fk2_ctl",
-                "thumb_R0_fk0_ctl",
-                "thumb_R0_fk1_ctl",
-                "thumb_R0_fk2_ctl",
-                "index_R0_fk0_ctl",
-                "index_R0_fk1_ctl",
-                "index_R0_fk2_ctl",
-                "middle_R0_fk0_ctl",
-                "middle_R0_fk1_ctl",
-                "middle_R0_fk2_ctl",
-                "ring_R0_fk0_ctl",
-                "ring_R0_fk1_ctl",
-                "ring_R0_fk2_ctl",
-                "pinky_R0_fk0_ctl",
-                "pinky_R0_fk1_ctl",
-                "pinky_R0_fk2_ctl",
-                "leg_L0_fk0_ctl",
-                "leg_L0_fk1_ctl",
-                "leg_L0_fk2_ctl",
-                "foot_L0_fk0_ctl",
-                "leg_R0_fk0_ctl",
-                "leg_R0_fk1_ctl",
-                "leg_R0_fk2_ctl",
-                "foot_R0_fk0_ctl",
-            ]
-
-            for i in range(len(joint_sl)):
-                pm.parentConstraint(
-                    joint_sl[i], ctrl_sl[i], mo=True, skipTranslate=["x", "y", "z"]
-                )
-            # # 通过使用fbxSDK移除fbx文件中的namespace
-            # fbx_file = fbx_wrap.FBX_Class(fbxPath)
-            # try:
-            #     fbx_file.remove_namespace()
-            #     fbx_file.save()
-            # except Exception as e:
-            #     print(e)
-            # 执行导入文件
+            self.setup_constraints()
             pm.importFile(fbxPath, defaultNamespace=True)
-            # 确定时间范围
+
             time_value = pm.keyframe(
                 "pelvis.rotateX", query=True, timeChange=True, absolute=True
             )
@@ -284,7 +259,7 @@ class AdvAnimToolsUI:
             last_frame = int(time_value[-1])
             pm.env.setMinTime(first_frame)
             pm.env.setMaxTime(last_frame)
-            # 烘焙动画
+
             pm.bakeResults(
                 self.all_ctrls,
                 simulation=True,
@@ -301,15 +276,12 @@ class AdvAnimToolsUI:
                 controlPoints=False,
                 shape=True,
             )
-            # 删除传递动画骨骼
             pm.delete("root")
-            # 烘焙手脚为动画为IK（以修正手肘膝盖旋转错误）
+
             for frame in range(int(first_frame), int(last_frame) + 1):
-                # 设置当前帧设置为FK
                 pm.currentTime(frame)
-                for a in fkik_attr:
-                    pm.setAttr(a, 0)
-                # 将FK匹配到IK
+                for attr in FKIK_ATTRS:
+                    pm.setAttr(attr, 0)
                 anim_utils.ikFkMatch(
                     "rig",
                     "arm_blend",
@@ -342,9 +314,9 @@ class AdvAnimToolsUI:
                     "leg_L0_ik_ctl",
                     "leg_L0_upv_ctl",
                 )
-            # 欧拉过滤
+
             pm.filterCurve(self.all_ctrls, filter="euler")
-            # 保存文件
+
             if self.savePath:
                 short_name = os.path.splitext(os.path.basename(fbxPath))[0]
                 file_path = os.path.join(self.savePath, short_name + ".mb")

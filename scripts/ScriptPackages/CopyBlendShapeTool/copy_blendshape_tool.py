@@ -9,6 +9,7 @@
 @librarys      : pymel 1.4.0
 @Description   :copy blendshape from source to target
 """
+
 import pymel.core as pm
 import pymel.core.nodetypes as nt
 
@@ -181,9 +182,7 @@ class CopyBlendShapeTool:
             # 重命名生成的混合变形所需的目标模型,并将其打组隐藏
             for mesh in bs_group:
                 pm.rename(mesh, newname=f"{target_mesh}_{mesh}")
-            target_grp = pm.group(
-                bs_group, name=f"{target_mesh}_target"
-            )
+            target_grp = pm.group(bs_group, name=f"{target_mesh}_target")
             pm.hide(target_grp)
         # 删除包裹变形器
         for mesh in target_meshes:
