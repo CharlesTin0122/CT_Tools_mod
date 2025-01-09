@@ -223,8 +223,11 @@ class AdvAnimToolsUI:
 
         pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
         pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
-        pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
-        pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
+        try:
+            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
+            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
+        except Exception as e:
+            print(e)
 
         for joint, ctrl in zip(JOINT_SL, CTRL_SL):
             pm.parentConstraint(joint, ctrl, mo=True, skipTranslate=["x", "y", "z"])
