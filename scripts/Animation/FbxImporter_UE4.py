@@ -6,7 +6,8 @@
 # @Software : PyCharm
 # Description:
 from importlib import reload
-from fbxImporter import fbx_importer
-reload(fbx_importer)
-advAnimToolsUI = fbx_importer.AdvAnimToolsUI()
+from fbxImporter import fbx_importer_ue4
+
+reload(fbx_importer_ue4)
+advAnimToolsUI = fbx_importer_ue4.AdvAnimToolsUI()
 advAnimToolsUI.create_ui()
