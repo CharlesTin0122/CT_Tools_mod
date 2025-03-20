@@ -83,9 +83,9 @@ class FbxExporterUI:
         # 设定需要烘焙的动画属性。分别为位移，旋转，缩放
         attrsToBake = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
         # 要需要烘焙的每根骨骼的每个属性放入everyBakeAttr变量
-        for eachJoint in self.objList:
-            for eachAttr in attrsToBake:
-                self.everyBakeAttr.append(f"{eachJoint}.{eachAttr}")
+        self.everyBakeAttr = [
+            f"{joint}.{attr}" for joint in self.objList for attr in attrsToBake
+        ]
 
     def select_export_path(self, *args):
         """选择导出路径"""
@@ -109,20 +109,12 @@ class FbxExporterUI:
 
     def export_all(self, *args):
         """执行批量导出"""
-        if not self.fileList:
-            pm.warning("No files selected for export.")
-            return
-        if not self.objList:
-            pm.warning("No objects selected for export.")
-            return
-        if not self.exportPath:
-            pm.warning("No export path selected.")
+        if not all([self.fileList, self.objList, self.exportPath]):
+            pm.warning("Please select files, objects, and export path.")
             return
 
         self.write_json()
-
-        with open(self.json_file, "r") as r:
-            exp_data = json.load(r)
+        exp_data = self.exp_data
 
         for f in exp_data["file_list"]:
             file_name = os.path.basename(f)
