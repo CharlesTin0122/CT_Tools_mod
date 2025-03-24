@@ -149,6 +149,9 @@ class FbxExporterUI:
                 expressions=False,
                 constructionHistory=False,
             )
+        # 关闭当前文件，防止烘焙文件被误保存
+        pm.newFile(f=True)
+        # 弹出对话框
         confirm = pm.confirmDialog(
             title="Finish", message="Done!", button=["OK", "Open Folder"]
         )

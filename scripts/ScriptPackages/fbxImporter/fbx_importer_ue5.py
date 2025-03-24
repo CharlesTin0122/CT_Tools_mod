@@ -80,7 +80,7 @@ class AdvAnimToolsUI:
         """载入导入fbx文件路径"""
         self.fbxList = pm.fileDialog2(fileFilter="FBX Files (*.fbx)", fileMode=4) or []
         if not self.fbxList:
-            pm.PopupError("Nothing Selected")
+            pm.warning("Nothing Selected")
             return
 
         for fbxPath in self.fbxList:
@@ -156,7 +156,7 @@ class AdvAnimToolsUI:
     def save_file(self, fbxPath):
         short_name = os.path.splitext(os.path.basename(fbxPath))[0]
         file_path = os.path.join(self.savePath, short_name + ".mb")
-        print(file_path)
+        logging.info(file_path)
         pm.saveAs(file_path, force=True)
 
     def _bake_fk_ik(self, first_frame, last_frame, arm=False, leg=False):
@@ -210,7 +210,7 @@ class AdvAnimToolsUI:
         elif arm_select == 2 and leg_select == 2:
             self._bake_fk_ik(self.first_frame, self.last_frame, arm=True, leg=True)
         else:
-            print("No valid FK/IK switch selected.")
+            logging.warning("No valid FK/IK switch selected.")
             # 欧拉过滤器
         pm.filterCurve(self.all_ctrls, filter="euler")
 
@@ -239,13 +239,13 @@ class AdvAnimToolsUI:
     def import_and_save(self, *args):
         """执行批量导入"""
         if not self.fbxList:
-            pm.PopupError("Nothing To Import")
+            logging.warning("Nothing To Import")
             return
 
         try:
             pm.progressWindow("progress_window", endProgress=True)
         except Exception as e:
-            print(e)  # 如果没有窗口，则忽略错误
+            logging.warning(e)  # 如果没有窗口，则忽略错误
         # 创建可中断进度窗口
         pm.progressWindow(
             "progress_window",
@@ -258,7 +258,7 @@ class AdvAnimToolsUI:
         for i, fbxPath in enumerate(self.fbxList):
             # 检查用户是否按下 Esc 键取消任务
             if pm.progressWindow("progress_window", query=True, isCancelled=True):
-                print("任务已被用户取消")
+                logging.warning("任务已被用户取消")
                 break
             pm.progressWindow(
                 "progress_window",
@@ -281,7 +281,10 @@ class AdvAnimToolsUI:
 
             if self.savePath:
                 self.save_file(fbxPath)
-        pm.progressWindow("progress_window", endProgress=True)
+        try:
+            pm.progressWindow("progress_window", endProgress=True)
+        except Exception as e:
+            logging.warning(e)  # 如果没有窗口，则忽略错误
         if self.savePath:
             self.confirm_dialog()
 
