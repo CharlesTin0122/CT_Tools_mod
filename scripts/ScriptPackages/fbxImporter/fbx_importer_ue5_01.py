@@ -28,7 +28,6 @@ class AdvAnimToolsUI:
         self.fbx_list_display = None
         self.fbx_field = None
         self.path_field = None
-        self.PFS_field = None
         self.all_ctrls = []
         self.arm_rbgrp = None
         self.leg_rbgrp = None
@@ -52,14 +51,10 @@ class AdvAnimToolsUI:
                         w=200, h=150, bgc=(0.5, 0.5, 0.5)
                     )
                     # 保存文件选项
-                    with pm.rowLayout(
-                        numberOfColumns=5, columnWidth5=(50, 100, 50, 30, 30)
-                    ):
+                    with pm.rowLayout(numberOfColumns=3, columnWidth3=(55, 140, 5)):
                         pm.text(label="Save Path:")
                         self.path_field = pm.textField()
                         pm.button(label="...", w=30, h=20, c=self.select_path)
-                        pm.text(label="FPS:")
-                        self.PFS_field = pm.textField(text="30")
                         # FKIK切换按钮
                     with pm.columnLayout(adj=1):
                         self.arm_rbgrp = pm.radioButtonGrp(
@@ -144,8 +139,7 @@ class AdvAnimToolsUI:
         """将手臂和腿设置为 FK 模式"""
         for attr in FKIK_ATTRS:
             pm.setAttr(attr, 0)
-        fps_val = pm.textField(self.PFS_field, q=True, text=True)
-        pm.currentUnit(time=f"{fps_val}fps")  # 设置帧率为60fps
+        pm.currentUnit(time="60fps")  # 设置帧率为60fps
         # 设置时间滑块范围并在第0帧设置关键帧
         pm.env.setMinTime(0)
         pm.env.setMaxTime(1)
@@ -216,7 +210,7 @@ class AdvAnimToolsUI:
         elif arm_select == 2 and leg_select == 2:
             self._bake_fk_ik(self.first_frame, self.last_frame, arm=True, leg=True)
         else:
-            logging.info("No valid FK/IK switch selected.")
+            logging.warning("No valid FK/IK switch selected.")
             # 欧拉过滤器
         pm.filterCurve(self.all_ctrls, filter="euler")
 
