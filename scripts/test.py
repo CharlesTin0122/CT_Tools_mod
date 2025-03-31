@@ -1,62 +1,62 @@
-from mgear.core import anim_utils
-from mgear.core.dagmenu import (
-    _list_rig_roots,
-    _find_rig_root,
-    _get_switch_node_attrs,
-    get_ik_fk_controls_by_role,
-)
 import pymel.core as pm
-import maya.cmds as cmds
+import pymel.core.nodetypes as nt
 
 
-def range_switch_exec(ui_host, switchTo, onlyKeyframes, start_frame, end_frame):
-    range_switch = anim_utils.IkFkTransfer()
+def find_blendshape_info(source_mesh: nt.Transform) -> list:
+    """用于返回给出模型的混合变形信息，包含名称和属性
 
-    switch_control = ui_host.name()
-    blend_attr = _get_switch_node_attrs(ui_host.name(), "_blend")[0]
+    Args:
+        source_mesh (pm.nodetypes.Transform): 给出的源模型
 
-    root = _find_rig_root(ui_host.name())
+    Returns:
+        list: 混合变形信息列表
+    """
 
-    criteria = blend_attr.replace("_blend", "") + "_id*_ctl_cnx"
-    component_ctl = cmds.listAttr(switch_control, ud=True, string=criteria) or []
-    if component_ctl:
-        ik_list = []
-        ikRot_list = []
-        fk_list = []
-        upv_list = []
+    blendshapes = pm.listHistory(source_mesh, type="blendShape")
 
-        for com_list in component_ctl:
-            # set the initial val for the blend attr in each iteration
-            ik_controls, fk_controls = get_ik_fk_controls_by_role(
-                switch_control, com_list
-            )
-            ik_list.append(ik_controls["ik_control"])
-            if ik_controls["ik_rot"]:
-                ikRot_list.append(ik_controls["ik_rot"])
-            upv_list.append(ik_controls["pole_vector"])
-            fk_list = fk_list + fk_controls
+    # 通过blendshape.listAliases()，获取混合变形信息。
+    bs_info_list = []
+    for blendshape in blendshapes:
+        # [('Breathe', Attribute('blendShape1.weight[0]')),...]
+        bs_infos = blendshape.listAliases()
+        bs_info_list.extend(bs_infos)
 
-        range_switch.execute(
-            model=root,
-            ikfk_attr=blend_attr,
-            uihost=pm.PyNode(switch_control).stripNamespace(),
-            fks=fk_list,
-            ik=ik_list,
-            upv=upv_list,
-            ikRot=ikRot_list,
-            startFrame=start_frame,
-            endFrame=end_frame,
-            onlyKeyframes=onlyKeyframes,
-            switchTo=switchTo,
-        )
+    return bs_info_list
+
+
+def copy_bs_mesh(
+    source_mesh: nt.Transform,
+    trans_bs_name: str = "SK_Human_male_001",
+):
+    """
+    该函数用于将角色A的面部混合变形传递到角色B
+    将角色B作为目标模型, 添加到A的混合变形中, 然后将角色A中的角色B名称的的混合变形权重设置为1。
+    以此将角色A的其他混合变形叠加到角色B后复制A模型得到相对于B的混合变形模型目标模型
+
+    Args:
+        source_mesh: 源模型A
+        trans_bs_name: 目标模型B
+    Returns:
+        None
+    """
+    # 获取源模型混合变形信息
+    bs_info_list = find_blendshape_info(source_mesh)
+    # 通过推导式生成字典，形式为{变形名称：变形属性,...}
+    bs_info_dict = {bs_info[0]: bs_info[1] for bs_info in bs_info_list}
+
+    for bs_name, bs_attr in bs_info_dict.items():
+        if bs_name == trans_bs_name:
+            continue
+        bs_attr.set(1)  # 将该混合变形属性设置为1
+        # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
+        bs_mesh = pm.duplicate(source_mesh)[0]
+        pm.select(clear=True)  # 清除选择
+        bs_mesh.rename(bs_name)
+        # 将该混合变形属性设置为0，返回未变形状态。
+        bs_info_dict[bs_name].set(0)
 
 
 if __name__ == "__main__":
-    sel = pm.ls(sl=True)[0]
-    range_switch_exec(
-        sel,
-        switchTo="ik",
-        onlyKeyframes=False,
-        start_frame=int(pm.playbackOptions(query=True, min=True)),
-        end_frame=int(pm.playbackOptions(query=True, max=True)),
-    )
+    # 选择源模型
+    source_mesh = pm.ls(selection=True)[0]
+    copy_bs_mesh(source_mesh)

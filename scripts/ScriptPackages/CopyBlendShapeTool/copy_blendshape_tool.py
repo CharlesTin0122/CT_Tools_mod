@@ -110,6 +110,7 @@ class CopyBlendShapeTool:
         # 通过blendshape.listAliases()，获取混合变形信息。
         bs_info_list = []
         for blendshape in blendshapes:
+            # [('Breathe', Attribute('blendShape1.weight[0]')),...]
             bs_infos = blendshape.listAliases()
             bs_info_list.extend(bs_infos)
 

@@ -115,11 +115,15 @@ class FbxExporterUI:
 
         self.write_json()
         exp_data = self.exp_data
-
+        # 'H:/Project_PJX/Animation/Unarmed/Locomotion/Anim_Male_Unarmed_Stand_Jump_Fall_Loop.0001.mb'
         for f in exp_data["file_list"]:
+            # Anim_Male_Unarmed_Stand_Jump_Fall_Loop.0001.mb
             file_name = os.path.basename(f)
-            bace_name = os.path.splitext(file_name)
-            exp_name = str(bace_name[0]) + ".fbx"
+            # 'Anim_Male_Unarmed_Stand_Jump_Fall_Loop', '0001', 'mb'
+            base_name = file_name.split(".")[0]
+            # 'Anim_Male_Unarmed_Stand_Jump_Fall_Loop.fbx'
+            exp_name = str(base_name) + ".fbx"
+
             pm.openFile(f, force=True)
             # 烘焙关键帧
             try:
