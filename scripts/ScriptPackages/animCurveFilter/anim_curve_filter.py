@@ -36,7 +36,7 @@
 """
 
 from functools import partial
-import pymel.core as pm
+import pymel.core as pc
 
 
 class AnimCurveFilter:
@@ -52,15 +52,15 @@ class AnimCurveFilter:
     def create_ui(self):
         """创建UI"""
         try:
-            pm.deleteUI("FilterCurve")
+            pc.deleteUI("FilterCurve")
         except Exception as exc:
             print(exc)
 
-        main_window = pm.window("FilterCurve", title="Curve filter")
-        pm.columnLayout()
+        main_window = pc.window("FilterCurve", title="Curve filter")
+        pc.columnLayout()
         # 创建radioButton选择器
-        self.filter_radioCol = pm.radioCollection()
-        rb_grp1 = pm.radioButtonGrp(
+        self.filter_radioCol = pc.radioCollection()
+        rb_grp1 = pc.radioButtonGrp(
             numberOfRadioButtons=3,
             label="filters: ",
             labelArray3=["butterworth", "Dampen", "Smooth"],
@@ -72,7 +72,7 @@ class AnimCurveFilter:
             # 默认按钮为第0个
             select=0,
         )
-        pm.radioButtonGrp(
+        pc.radioButtonGrp(
             numberOfRadioButtons=2,
             shareCollection=rb_grp1,
             label="",
@@ -81,7 +81,7 @@ class AnimCurveFilter:
             changeCommand2=partial(self.switch_filter, 4),
         )
         # 创建浮点滑条按钮组件
-        self.value_slider = pm.floatSliderButtonGrp(
+        self.value_slider = pc.floatSliderButtonGrp(
             label="Value: ",
             field=True,
             # 指定拖动滑条命令，每次滑条拖动完毕执行的命令
@@ -98,24 +98,24 @@ class AnimCurveFilter:
             fieldMaxValue=100.0,
             value=0.0,
         )
-        pm.text(
+        pc.text(
             label="Butterworth:    在最大限度保持曲线细节的情况下, 对曲线进行一些光滑.",
             align="center",
         )
-        pm.text(
+        pc.text(
             label="Dampen:    在保持曲线连续性的情况下, 对曲线上选择的点增加或减少曲线的振幅.",
             align="center",
         )
-        pm.text(
+        pc.text(
             label="Smooth:    忽略最大限度的保持曲线细节, 对曲线进行大幅度的光滑. 需谨慎使用.",
             align="center",
         )
-        pm.text(label="simplify:    对动画曲线进行简化，减少关键帧.", align="center")
-        pm.text(
+        pc.text(label="simplify:    对动画曲线进行简化，减少关键帧.", align="center")
+        pc.text(
             label="Twinner:    根据前后帧的值按照比例插值添加中间帧。", align="center"
         )
 
-        pm.showWindow(main_window)
+        pc.showWindow(main_window)
 
     def switch_filter(self, filter_type: int, *args):
         """
@@ -136,7 +136,7 @@ class AnimCurveFilter:
             self.default_value, drag_cmd, min_val, max_val, default_val = (
                 filter_settings[filter_type]
             )
-            pm.floatSliderButtonGrp(
+            pc.floatSliderButtonGrp(
                 self.value_slider,
                 edit=True,
                 dragCommand=drag_cmd,
@@ -163,13 +163,13 @@ class AnimCurveFilter:
         time_value_list = []
         attr_list = []
 
-        sel_obj_list = pm.selected()
+        sel_obj_list = pc.selected()
         if sel_obj_list:
             for obj in sel_obj_list:
-                attrs = pm.listAnimatable(obj)
+                attrs = pc.listAnimatable(obj)
                 attr_list.extend(attrs)
                 for attr in attrs:
-                    key_value = pm.keyframe(
+                    key_value = pc.keyframe(
                         attr,
                         sl=True,
                         query=True,
@@ -178,7 +178,7 @@ class AnimCurveFilter:
                     )
                     key_value_list.append(key_value)
 
-                    time_value = pm.keyframe(
+                    time_value = pc.keyframe(
                         attr, sl=True, query=True, timeChange=True, absolute=True
                     )
                     time_value_list.append(time_value)
@@ -196,10 +196,10 @@ class AnimCurveFilter:
         """
 
         # 获取滑条数据并重新插值计算。
-        filter_value = pm.floatSliderButtonGrp(self.value_slider, q=True, v=True)
+        filter_value = pc.floatSliderButtonGrp(self.value_slider, q=True, v=True)
         scale_value = self.remap(0.0, 100.0, 1.0, -2.0, filter_value)
         # 关闭缓存曲线更新，以便后面返回原始曲线数据。
-        pm.bufferCurve(animation="keys", overwrite=False)
+        pc.bufferCurve(animation="keys", overwrite=False)
 
         attr_list, time_value_list, key_value_list = self.get_keyframe_data()
 
@@ -215,14 +215,14 @@ class AnimCurveFilter:
                     # 求出相邻三帧的平均值
                     average_value = (pre_value + cur_value + nex_value) / 3
                     # 以此平均值作为轴心来对第二帧对应曲线上的点进行拉伸或挤压.
-                    pm.scaleKey(
+                    pc.scaleKey(
                         attr,
                         time=(time_value[j], time_value[j]),
                         valuePivot=average_value,
                         valueScale=scale_value,
                     )
                     # 调整曲线切线为自动
-                    pm.keyTangent(itt="auto", ott="auto")
+                    pc.keyTangent(itt="auto", ott="auto")
 
     def dampon_filter(self, *args):
         """给给定的关键帧动画应用dampon过滤器
@@ -234,10 +234,10 @@ class AnimCurveFilter:
         """
 
         # 获取滑条数据并重新插值计算。
-        filter_value = pm.floatSliderButtonGrp(self.value_slider, q=True, v=True)
+        filter_value = pc.floatSliderButtonGrp(self.value_slider, q=True, v=True)
         scale_value = self.remap(0.0, 100.0, 0.5, 1.5, filter_value)
         # 关闭缓存曲线更新，以便后面返回原始曲线数据。
-        pm.bufferCurve(animation="keys", overwrite=False)
+        pc.bufferCurve(animation="keys", overwrite=False)
 
         attr_list, time_value_list, key_value_list = self.get_keyframe_data()
 
@@ -257,7 +257,7 @@ class AnimCurveFilter:
                         tangent * (time_value[j] - time_value[0]) + key_value[0]
                     )
                     # 使用缩放中心点和百分比缩放关键帧
-                    pm.scaleKey(
+                    pc.scaleKey(
                         attr,
                         time=(time_value[j], time_value[j]),
                         valuePivot=scale_pivot,
@@ -286,8 +286,8 @@ class AnimCurveFilter:
         其原理和butterworth类似：对曲线上每相邻的三帧, 求出他们的平均值, 以此平均值直接赋予第二帧的数值.
         UI滑条值为执行平滑脚本次数。
         """
-        filter_value = pm.floatSliderButtonGrp(self.value_slider, q=True, v=True)
-        pm.bufferCurve(animation="keys", overwrite=False)
+        filter_value = pc.floatSliderButtonGrp(self.value_slider, q=True, v=True)
+        pc.bufferCurve(animation="keys", overwrite=False)
 
         attr_list, time_value_list, key_value_list = self.get_keyframe_data()
 
@@ -302,7 +302,7 @@ class AnimCurveFilter:
 
                     average_value = (pre_value + cur_value + nex_value) / 3
 
-                    pm.keyframe(
+                    pc.keyframe(
                         attr,
                         time=(time_value[j], time_value[j]),
                         valueChange=average_value,
@@ -320,10 +320,10 @@ class AnimCurveFilter:
         Returns:
             None
         """
-        filter_value = pm.floatSliderButtonGrp(self.value_slider, q=True, v=True)
+        filter_value = pc.floatSliderButtonGrp(self.value_slider, q=True, v=True)
         scale_value = self.remap(0.0, 100.0, 0.0, 3.0, filter_value)
 
-        pm.bufferCurve(animation="keys", overwrite=False)
+        pc.bufferCurve(animation="keys", overwrite=False)
 
         attr_list, time_value_list, _ = self.get_keyframe_data()
 
@@ -332,7 +332,7 @@ class AnimCurveFilter:
             # 检查属性是否有关键帧
             if len(time_value) > 0:
                 # 在给定的时间范围内简化属性的关键帧
-                pm.simplify(
+                pc.simplify(
                     attr,
                     time=(time_value[0], time_value[-1]),
                     timeTolerance=scale_value,
@@ -340,7 +340,7 @@ class AnimCurveFilter:
                     valueTolerance=scale_value,
                 )
                 # 简化完成后重选所选的关键帧，以便下次简化
-                pm.selectKey(
+                pc.selectKey(
                     attr,
                     replace=True,
                     time=(time_value[0], time_value[-1]),
@@ -350,27 +350,27 @@ class AnimCurveFilter:
         """和Twinning machine工具类似.
         对于手K动画很有用的添加中间帧的工具, 只需要选择控制器(可以多选), 拖动滑条能自动的K帧并且选择让这一帧的数值更偏向前一帧或者后一帧.
         """
-        filter_value = pm.floatSliderButtonGrp(self.value_slider, q=True, v=True)
+        filter_value = pc.floatSliderButtonGrp(self.value_slider, q=True, v=True)
         scale_value = self.remap(0.0, 100.0, 0, 1.0, filter_value)
 
-        current_time = pm.currentTime(query=True)
+        current_time = pc.currentTime(query=True)
         attr_list, time_value_list, key_value_list = self.get_keyframe_data()
 
         for attr in attr_list:
-            current_value = pm.keyframe(attr, time=current_time, query=True, eval=True)
+            current_value = pc.keyframe(attr, time=current_time, query=True, eval=True)
             if current_value:
                 # 前一个关键帧的时间点
-                pre_time = pm.findKeyframe(attr, time=current_time, which="previous")
+                pre_time = pc.findKeyframe(attr, time=current_time, which="previous")
                 # 前一个关键帧的值。
-                pre_value = pm.keyframe(attr, time=pre_time, query=True, eval=True)
+                pre_value = pc.keyframe(attr, time=pre_time, query=True, eval=True)
                 # 后一个关键帧的时间点。
-                next_time = pm.findKeyframe(attr, time=current_time, which="next")
+                next_time = pc.findKeyframe(attr, time=current_time, which="next")
                 # 后一个关键帧的值。
-                next_value = pm.keyframe(attr, time=next_time, query=True, eval=True)
+                next_value = pc.keyframe(attr, time=next_time, query=True, eval=True)
                 # 如果前后两个关键帧同时存在，中间却没有关键帧，则新增一个关键帧
                 if pre_value and next_value:
-                    if not pm.keyframe(attr, time=current_time, query=True):
-                        pm.setKeyframe(attr, time=current_time)
+                    if not pc.keyframe(attr, time=current_time, query=True):
+                        pc.setKeyframe(attr, time=current_time)
                     # 如果前一个关键帧的值不等于后一个关键帧的值。
                     if next_value[0] != pre_value[0]:
                         # 根据前一个关键帧和后一个关键帧的值，差值计算中间关键帧一个新值
@@ -379,7 +379,7 @@ class AnimCurveFilter:
                             scale_value * (next_value[0] - pre_value[0]) + pre_value[0]
                         )
                         # 更新关键帧的值
-                        pm.keyframe(
+                        pc.keyframe(
                             attr, time=current_time, valueChange=current_key_value
                         )
 
@@ -390,16 +390,16 @@ class AnimCurveFilter:
         """
         try:
             # 返回修改前缓存曲线的状态
-            pm.bufferCurve(animation="keys", swap=True)
+            pc.bufferCurve(animation="keys", swap=True)
             # 覆盖缓存曲线为当前曲线
-            pm.bufferCurve(animation="keys", overwrite=True)
+            pc.bufferCurve(animation="keys", overwrite=True)
         except Exception as exc:
             print(exc)
 
     def reset_slider(self, *args):
         """重设浮点滑条"""
         try:
-            pm.floatSliderButtonGrp(
+            pc.floatSliderButtonGrp(
                 self.value_slider, edit=True, value=self.default_value
             )
         except Exception as exc:

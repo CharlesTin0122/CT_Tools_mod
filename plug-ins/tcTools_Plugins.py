@@ -6,9 +6,10 @@
 # @Software : PyCharm
 # Description:
 
-import pymel.core as pm
+import pymel.core as pc
 from importlib import reload
 import tcTools_MenuUI
+
 reload(tcTools_MenuUI)
 
 

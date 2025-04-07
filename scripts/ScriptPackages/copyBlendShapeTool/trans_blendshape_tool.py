@@ -1,4 +1,4 @@
-import pymel.core as pm
+import pymel.core as pc
 import pymel.core.nodetypes as nt
 
 
@@ -6,13 +6,13 @@ def find_blendshape_info(source_mesh: nt.Transform) -> list:
     """用于返回给出模型的混合变形信息，包含名称和属性
 
     Args:
-        source_mesh (pm.nodetypes.Transform): 给出的源模型
+        source_mesh (pc.nodetypes.Transform): 给出的源模型
 
     Returns:
         list: 混合变形信息列表
     """
 
-    blendshapes = pm.listHistory(source_mesh, type="blendShape")
+    blendshapes = pc.listHistory(source_mesh, type="blendShape")
 
     # 通过blendshape.listAliases()，获取混合变形信息。
     bs_info_list = []
@@ -46,8 +46,8 @@ def copy_bs_mesh(source_mesh: nt.Transform, trans_bs_name: str):
             continue
         bs_attr.set(1)  # 将该混合变形属性设置为1
         # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
-        bs_mesh = pm.duplicate(source_mesh)[0]
-        pm.select(clear=True)  # 清除选择
+        bs_mesh = pc.duplicate(source_mesh)[0]
+        pc.select(clear=True)  # 清除选择
         bs_mesh.rename(bs_name)
         # 将该混合变形属性设置为0，返回未变形状态。
         bs_info_dict[bs_name].set(0)
@@ -55,6 +55,6 @@ def copy_bs_mesh(source_mesh: nt.Transform, trans_bs_name: str):
 
 if __name__ == "__main__":
     # 选择源模型
-    source_mesh = pm.ls(selection=True)[0]
+    source_mesh = pc.ls(selection=True)[0]
     trans_bs_name = "SK_Human_Male_001"
     copy_bs_mesh(source_mesh, trans_bs_name)

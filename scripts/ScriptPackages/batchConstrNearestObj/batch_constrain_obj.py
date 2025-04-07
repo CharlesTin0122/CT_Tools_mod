@@ -5,7 +5,7 @@
 # @Email: tianchao0533@gamil.com
 # @Software: PyCharm
 
-import pymel.core as pm
+import pymel.core as pc
 
 
 class BatchConstrNearestObj(object):
@@ -19,47 +19,47 @@ class BatchConstrNearestObj(object):
 
     def create_ui(self):
         try:
-            pm.deleteUI("MyWin")
+            pc.deleteUI("MyWin")
         except Exception as exc:
             print(exc)
 
-        self.window = pm.window("MyWin", title="Batch Constrain Tool")
-        with pm.columnLayout(rowSpacing=5, adj=True):
-            with pm.frameLayout(label="BatchConstrNearestObj"):
-                with pm.columnLayout(adj=1):
-                    pm.button(
+        self.window = pc.window("MyWin", title="Batch Constrain Tool")
+        with pc.columnLayout(rowSpacing=5, adj=True):
+            with pc.frameLayout(label="BatchConstrNearestObj"):
+                with pc.columnLayout(adj=1):
+                    pc.button(
                         label="Load Constrain Obj", w=150, h=30, c=self.load_list1_click
                     )
-                with pm.scrollLayout(
+                with pc.scrollLayout(
                     w=200, h=150, bgc=(0.5, 0.5, 0.5)
                 ) as self.list1_ui:
-                    pm.text("Obj List A:")
-                with pm.columnLayout(adj=1):
-                    pm.button(
+                    pc.text("Obj List A:")
+                with pc.columnLayout(adj=1):
+                    pc.button(
                         label="Load be Constrained Obj",
                         w=150,
                         h=30,
                         c=self.load_list2_click,
                     )
-                with pm.scrollLayout(
+                with pc.scrollLayout(
                     w=200, h=150, bgc=(0.5, 0.5, 0.5)
                 ) as self.list2_ui:
-                    pm.text("Obj List B:")
-                with pm.columnLayout(adj=1):
-                    pm.button(
+                    pc.text("Obj List B:")
+                with pc.columnLayout(adj=1):
+                    pc.button(
                         label="Batch Constrain !!!", w=150, h=50, c=self.batch_constrain
                     )
         self.window.show()
 
     def load_list_click(self, list_ui, list_attr):
-        selected_list = pm.selected()
+        selected_list = pc.selected()
         if not selected_list:
-            pm.warning("No selected obj !!!")
+            pc.warning("No selected obj !!!")
             return
         setattr(self, list_attr, selected_list)
         with list_ui:
             for obj in selected_list:
-                pm.text(label=f"{obj}")
+                pc.text(label=f"{obj}")
         return selected_list
 
     def load_list1_click(self, *args):
@@ -92,10 +92,10 @@ class BatchConstrNearestObj(object):
                     closest_distance = distance  # 最近距离就是该距离
 
             # 如果最近骨骼存在,同时骨骼没有被约束,父子约束到最近的骨骼
-            if closest_obj and not pm.listConnections(
+            if closest_obj and not pc.listConnections(
                 closest_obj, type="parentConstraint"
             ):
-                pm.parentConstraint(obj, closest_obj, maintainOffset=True)  # 执行约束
+                pc.parentConstraint(obj, closest_obj, maintainOffset=True)  # 执行约束
                 constrain_list = f"{obj}->{closest_obj}"
                 self.constrain_list.append(constrain_list)
         print(self.constrain_list)

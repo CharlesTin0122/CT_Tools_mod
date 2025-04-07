@@ -1,8 +1,8 @@
-import pymel.core as pm
+import pymel.core as pc
 
-objs = pm.selected()
+objs = pc.selected()
 position_list = []
 for obj in objs:
     position = obj.getTranslation(space="world")
     position_list.append(position)
-pm.polyCreateFacet(p=position_list)
+pc.polyCreateFacet(p=position_list)

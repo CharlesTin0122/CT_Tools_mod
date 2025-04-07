@@ -9,7 +9,7 @@
 """
 
 import os
-import pymel.core as pm
+import pymel.core as pc
 from mgear.core import anim_utils
 
 # 常量定义
@@ -142,128 +142,128 @@ class AdvAnimToolsUI:
     def create_ui(self):
         """构建UI"""
         try:
-            pm.deleteUI("advTool")
+            pc.deleteUI("advTool")
         except Exception as e:
             print(e)
 
-        with pm.window("advTool", title="advAnimtools") as win:
-            with pm.columnLayout(rowSpacing=5, adj=True):
-                with pm.frameLayout(label="Import multiple FBX"):
-                    with pm.columnLayout(adj=1):
-                        pm.button(label="Load All fbx", c=self.load)
-                    with pm.scrollLayout(
+        with pc.window("advTool", title="advAnimtools") as win:
+            with pc.columnLayout(rowSpacing=5, adj=True):
+                with pc.frameLayout(label="Import multiple FBX"):
+                    with pc.columnLayout(adj=1):
+                        pc.button(label="Load All fbx", c=self.load)
+                    with pc.scrollLayout(
                         w=200, h=150, bgc=(0.5, 0.5, 0.5)
                     ) as self.fbx_field:
-                        pm.text("fbx Name:")
-                    with pm.rowLayout(
+                        pc.text("fbx Name:")
+                    with pc.rowLayout(
                         numberOfColumns=3,
                         columnWidth3=(55, 140, 5),
                         adjustableColumn=2,
                         columnAlign=(1, "right"),
                         columnAttach=[(1, "both", 0), (2, "both", 0), (3, "both", 0)],
                     ):
-                        pm.text(label="Save Path:")
-                        self.path_field = pm.textField("ImporterTextField")
-                        pm.button(label="...", w=30, h=20, c=self.select_path)
-                    with pm.columnLayout(adj=1):
-                        pm.button(
+                        pc.text(label="Save Path:")
+                        self.path_field = pc.textField("ImporterTextField")
+                        pc.button(label="...", w=30, h=20, c=self.select_path)
+                    with pc.columnLayout(adj=1):
+                        pc.button(
                             label="Import fbx And Save File !!!", c=self.import_and_save
                         )
 
-        pm.window(win, e=True, w=250, h=300)
-        pm.showWindow(win)
+        pc.window(win, e=True, w=250, h=300)
+        pc.showWindow(win)
 
     def load(self, *args):
         """载入导入fbx文件路径"""
-        self.fbxList = pm.fileDialog2(fileFilter="*fbx", fileMode=4)
+        self.fbxList = pc.fileDialog2(fileFilter="*fbx", fileMode=4)
 
         if not self.fbxList:
-            pm.PopupError("Nothing Selected")
+            pc.PopupError("Nothing Selected")
             self.fbxList = []
             return
 
         for fbxPath in self.fbxList:
             fbx_name = os.path.basename(fbxPath)
             with self.fbx_field:
-                pm.text(label=fbx_name)
+                pc.text(label=fbx_name)
 
     def select_path(self, *args):
         """选择保存路径"""
-        save_path = pm.fileDialog2(fileFilter="*folder", fileMode=2)
+        save_path = pc.fileDialog2(fileFilter="*folder", fileMode=2)
         if save_path:
             self.savePath = save_path[0]
-            pm.textField(self.path_field, e=True, text=self.savePath)
+            pc.textField(self.path_field, e=True, text=self.savePath)
 
     def delete_connection(self, plug):
         """移除给出属性接口的链接（删除动画）"""
-        if pm.connectionInfo(plug, isDestination=True):
-            plug = pm.connectionInfo(plug, getExactDestination=True)
-            readOnly = pm.ls(plug, readOnly=True)
+        if pc.connectionInfo(plug, isDestination=True):
+            plug = pc.connectionInfo(plug, getExactDestination=True)
+            readOnly = pc.ls(plug, readOnly=True)
             if readOnly:
-                source = pm.connectionInfo(plug, sourceFromDestination=True)
-                pm.disconnectAttr(source, plug)
+                source = pc.connectionInfo(plug, sourceFromDestination=True)
+                pc.disconnectAttr(source, plug)
             else:
-                pm.delete(plug, inputConnectionsAndNodes=True)
+                pc.delete(plug, inputConnectionsAndNodes=True)
 
     def reset_controllers(self):
         """删除动画并重置控制器位置"""
         for ctrl in self.all_ctrls:
-            keyable_attrs = pm.listAttr(ctrl, keyable=True)
-            animatable_attrs = pm.listAnimatable(ctrl)
+            keyable_attrs = pc.listAttr(ctrl, keyable=True)
+            animatable_attrs = pc.listAnimatable(ctrl)
             for attr in animatable_attrs:
                 self.delete_connection(f"{attr}")
             anim_utils.reset_selected_channels_value([ctrl], keyable_attrs)
 
     def setup_constraints(self):
         """创建传递动画骨骼并约束控制器"""
-        pm.duplicate("skin:root")
-        root_jnt = pm.PyNode("root")
-        constraints = pm.ls(root_jnt, dag=True, type="constraint")
-        pm.delete(constraints)
+        pc.duplicate("skin:root")
+        root_jnt = pc.PyNode("root")
+        constraints = pc.ls(root_jnt, dag=True, type="constraint")
+        pc.delete(constraints)
 
-        pm.parentConstraint("root", "root_main_C0_ctl", mo=True)
-        pm.parentConstraint("pelvis", "body_C0_ctl", mo=True)
+        pc.parentConstraint("root", "root_main_C0_ctl", mo=True)
+        pc.parentConstraint("pelvis", "body_C0_ctl", mo=True)
         try:
-            pm.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
-            pm.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
+            pc.parentConstraint("Weapon_L", "Weapon_L_L0_ctl", mo=True)
+            pc.parentConstraint("Weapon_R", "Weapon_R_R0_ctl", mo=True)
         except Exception as e:
             print(e)
 
         for joint, ctrl in zip(JOINT_SL, CTRL_SL):
-            pm.parentConstraint(joint, ctrl, mo=True, skipTranslate=["x", "y", "z"])
+            pc.parentConstraint(joint, ctrl, mo=True, skipTranslate=["x", "y", "z"])
 
     def import_and_save(self, *args):
         """执行批量导入"""
         if not self.fbxList:
-            pm.PopupError("Nothing To Import")
+            pc.PopupError("Nothing To Import")
             return
 
-        all_ctrl_sets = pm.PyNode("rig_controllers_grp")
+        all_ctrl_sets = pc.PyNode("rig_controllers_grp")
         self.all_ctrls = all_ctrl_sets.members()
 
         for fbxPath in self.fbxList:
             self.reset_controllers()
-            pm.currentUnit(time="ntsc")
-            pm.env.setMinTime(0)
-            pm.env.setMaxTime(1)
-            pm.currentTime(0)
-            pm.setKeyframe(self.all_ctrls)
+            pc.currentUnit(time="ntsc")
+            pc.env.setMinTime(0)
+            pc.env.setMaxTime(1)
+            pc.currentTime(0)
+            pc.setKeyframe(self.all_ctrls)
 
             for attr in FKIK_ATTRS:
-                pm.setAttr(attr, 0)
+                pc.setAttr(attr, 0)
 
             self.setup_constraints()
-            pm.importFile(fbxPath, defaultNamespace=True)
+            pc.importFile(fbxPath, defaultNamespace=True)
 
-            time_value = pm.keyframe(
+            time_value = pc.keyframe(
                 "pelvis.rotateX", query=True, timeChange=True, absolute=True
             )
             first_frame = int(time_value[0])
             last_frame = int(time_value[-1])
-            pm.env.setMinTime(first_frame)
-            pm.env.setMaxTime(last_frame)
+            pc.env.setMinTime(first_frame)
+            pc.env.setMaxTime(last_frame)
 
-            pm.bakeResults(
+            pc.bakeResults(
                 self.all_ctrls,
                 simulation=True,
                 time=(first_frame, last_frame),
@@ -279,12 +279,12 @@ class AdvAnimToolsUI:
                 controlPoints=False,
                 shape=True,
             )
-            pm.delete("root")
+            pc.delete("root")
 
             for frame in range(int(first_frame), int(last_frame) + 1):
-                pm.currentTime(frame)
+                pc.currentTime(frame)
                 for attr in FKIK_ATTRS:
-                    pm.setAttr(attr, 0)
+                    pc.setAttr(attr, 0)
                 anim_utils.ikFkMatch(
                     "rig",
                     "arm_blend",
@@ -318,16 +318,16 @@ class AdvAnimToolsUI:
                     "leg_L0_upv_ctl",
                 )
 
-            pm.filterCurve(self.all_ctrls, filter="euler")
+            pc.filterCurve(self.all_ctrls, filter="euler")
 
             if self.savePath:
                 short_name = os.path.splitext(os.path.basename(fbxPath))[0]
                 file_path = os.path.join(self.savePath, short_name + ".mb")
                 print(file_path)
-                pm.saveAs(file_path, force=True)
+                pc.saveAs(file_path, force=True)
 
         if self.savePath:
-            confirm = pm.confirmDialog(
+            confirm = pc.confirmDialog(
                 title="Finish", message="Done!", button=["OK", "Open Folder"]
             )
             if confirm == "Open Folder" and self.savePath:
