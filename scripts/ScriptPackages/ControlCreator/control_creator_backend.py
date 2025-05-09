@@ -5,10 +5,11 @@ import maya.cmds as cmds  # 使用 maya.cmds 获取组件的旋转轴心点
 
 
 def get_script_directory():
-    """获取脚本所在的目录，优先使用__file__，否则使用用户脚本目录"""
+    """获取脚本所在的目录, 优先使用__file__, 否则使用用户脚本目录"""
     try:
-        # 如果是通过文件执行
+        # 获取当前文件所在路径并转化为绝对路径
         script_path = Path(__file__).resolve()
+        # 返回当前文件路径的父路径
         return script_path.parent
     except NameError:
         # 如果是在Maya脚本编辑器中粘贴执行 (没有 __file__)
@@ -19,20 +20,27 @@ def get_script_directory():
 
 
 def get_control_shapes_dir():
+    """获取控制器数据路径"""
     return get_script_directory() / "control_shapes"
 
 
-# 获取曲线信息 (与你提供的版本基本一致)
 def get_curve_info(curve_transform):
+    """获取曲线逆袭
+
+    Args:
+        curve_transform (pc.nodetypes.transform): Nurbs曲线
+
+    Returns:
+        Dict: 曲线数据
+    """
     curve_shape = curve_transform.getShape()
     if not curve_shape or not isinstance(curve_shape, pc.nodetypes.NurbsCurve):
-        pc.warning(f"{curve_transform.name()} 不是一个有效的NURBS曲线，已跳过。")
+        pc.warning(f"{curve_transform.name()} 不是一个有效的NURBS曲线, 已跳过。")
         return None
     shape_name = curve_shape.name()  # 使用 .name() 以确保获取正确的长/短名称
     curve_data = {}
-    curve_data["cvs"] = [
-        list(cv) for cv in curve_shape.getCVs(space="object")
-    ]  # 获取对象空间的CV点
+    # 获取曲线信息
+    curve_data["cvs"] = [list(cv) for cv in curve_shape.getCVs(space="object")]
     curve_data["knots"] = list(curve_shape.getKnots())
     curve_data["degree"] = curve_shape.degree()
     curve_data["form"] = curve_shape.form().index
@@ -44,19 +52,27 @@ def get_curve_info(curve_transform):
     return {shape_name: curve_data}
 
 
-# 创建曲线 (修改: 返回offset group, 并处理颜色)
 def create_curve_from_data(
     data, base_name="newCurve", new_color_index=None, new_rgb_color=None
 ):
+    """
+    根据曲线数据创建NURBS曲线
+
+    Args:
+        data (Dict[str, Dict[str, Any]]): 曲线数据,key为形状名,value为曲线数据
+        base_name (str, optional): 新建曲线的名称前缀. Defaults to "newCurve".
+        new_color_index (int, optional): 新建曲线的颜色索引. Defaults to None.
+        new_rgb_color (Tuple[float, float, float], optional): 新建曲线的RGB颜色. Defaults to None.
+
+    Returns:
+        Union[Dict[str, Any], List[Dict[str, Any]]]: 创建的曲线信息,包括offset group和curve transform
+    """
     created_curves_info = []
     for shape_data_name, curve_data in data.items():
-        # 如果 base_name 包含Maya不允许的字符，或者想用shape_data_name
-        # 你可能需要一个更复杂的命名策略
-        # 这里我们简单使用 base_name 作为前缀
-
-        actual_shape_name = f"{base_name}Shape"  # 确保形状名和变换名有一定关联但不同
-        transform_name = base_name
-
+        # 曲线命名
+        transform_name = f"{base_name}_ctrl"
+        actual_shape_name = f"{transform_name}Shape"
+        # 获取信息
         cvs = [point[:3] for point in curve_data["cvs"]]
         knots = curve_data["knots"]
         degree = curve_data["degree"]
@@ -115,17 +131,19 @@ def create_curve_from_data(
     )
 
 
-# 写入JSON (与你提供的版本一致)
 def write_json_data(json_data: dict, json_name: str, subfolder="control_shapes"):
+    """写入json"""
+    # 获取当前模块路径，globals()返回包含当前作用域全局变量的字典
     module_path = (
         Path(__file__).resolve()
         if "__file__" in globals()
         else Path(cmds.internalVar(userScriptDir=True))
     )
+
     module_dir = (
         module_path.parent if "__file__" in globals() else module_path
     )  # 如果在脚本编辑器运行，可能没有parent
-
+    # 构建数据路径，并确保路径存在
     target_dir = module_dir / subfolder
     target_dir.mkdir(parents=True, exist_ok=True)  # 确保目录存在
 
@@ -141,8 +159,16 @@ def write_json_data(json_data: dict, json_name: str, subfolder="control_shapes")
         pc.error(f"写入JSON文件失败: {e}")
 
 
-# 读取JSON (与你提供的版本一致)
 def read_json_data(json_name: str, subfolder="control_shapes"):
+    """读取JSON
+
+    Args:
+        json_name (str):json文件名称
+        subfolder (str, optional): 子文件夹名称默认为 "control_shapes".
+
+    Returns:
+        _type_: 数据
+    """
     module_path = (
         Path(__file__).resolve()
         if "__file__" in globals()
@@ -168,15 +194,10 @@ def read_json_data(json_name: str, subfolder="control_shapes"):
         return None
 
 
-# -----------------------------------------------------------------------------
-# 新增功能函数
-# -----------------------------------------------------------------------------
-
-
 def adjust_controller_size(controller_info_or_node, scale_factor):
     """
     调整控制器的大小。可以直接修改CV点。
-    :param controller_info_or_node: create_curve_from_data返回的字典，或控制器的offset group/transform节点。
+    :param controller_info_or_node: create_curve_from_data返回的字典, 或控制器的offset group/transform节点。
     :param scale_factor: 缩放因子，可以是单个浮点数或三元组/列表 [sx, sy, sz]。
     """
     curve_transform = None
@@ -216,12 +237,14 @@ def adjust_controller_size(controller_info_or_node, scale_factor):
         pc.warning("scale_factor 必须是一个数字或包含三个数字的列表/元组。")
         return
 
-    # 获取CV点，在对象空间进行缩放，然后设置回去
-    # 这种方式会保持曲线的枢轴点(pivot)在原位进行缩放
+    # 获取局部空间CV点坐标，，坐标是局部空间的是基于枢轴点(pivot)的位置偏移
     cvs = curve_shape.getCVs(space="object")
+    # 坐标每个分量乘以缩放系数，缩放这个点相对于枢轴点(pivot)的位置偏移
     scaled_cvs = [pc.dt.Point(cv[0] * s[0], cv[1] * s[1], cv[2] * s[2]) for cv in cvs]
+    # 将缩放后的数据设置到曲线
     curve_shape.setCVs(scaled_cvs, space="object")
-    curve_shape.updateCurve()  # 更新曲线显示
+    # 更新曲线显示
+    curve_shape.updateCurve()
     print(f"控制器 {curve_transform.name()} 的大小已调整。")
 
 
