@@ -2,7 +2,7 @@ import pymel.core as pm
 import maya.cmds as cmds  # 导入 maya.cmds 以便在某些 UI 回调中可能需要
 from pathlib import Path
 import functools  # 用于 partial，方便传递参数给回调函数
-from control_creator_backend import (
+from ControlCreator.control_creator_backend import (
     get_script_directory,
     get_control_shapes_dir,
     get_curve_info,

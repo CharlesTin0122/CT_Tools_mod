@@ -187,26 +187,26 @@ if __name__ == "__main__":
     )
     print("-" * 30)
 
-    # # ----- 示例 2: 调整到精确尺寸 (带填充) -----
-    # print("\n--- 任务2: 调整到精确尺寸 (带填充) ---")
-    # input_directory_exact = "input_images"  # << 通常与上面相同，或不同
-    # output_directory_exact = (
-    #     "output_images_exact_size"  # << 修改这里：调整后图片的保存文件夹
-    # )
+    # ----- 示例 2: 调整到精确尺寸 (带填充) -----
+    print("\n--- 任务2: 调整到精确尺寸 (带填充) ---")
+    input_directory_exact = "input_images"  # << 通常与上面相同，或不同
+    output_directory_exact = (
+        "output_images_exact_size"  # << 修改这里：调整后图片的保存文件夹
+    )
 
-    # if not os.path.exists(input_directory_exact):  # 再次检查，以防用户只运行此部分
-    #     os.makedirs(input_directory_exact)
-    #     print(f"创建了示例输入文件夹: {input_directory_exact}，请放入图片后重新运行。")
+    if not os.path.exists(input_directory_exact):  # 再次检查，以防用户只运行此部分
+        os.makedirs(input_directory_exact)
+        print(f"创建了示例输入文件夹: {input_directory_exact}，请放入图片后重新运行。")
 
-    # # 目标精确尺寸
-    # exact_width = 500
-    # exact_height = 500
-    # fill_color_bg = (230, 230, 230, 255)  # 浅灰色背景，不透明 (R, G, B, A)
+    # 目标精确尺寸
+    exact_width = 500
+    exact_height = 500
+    fill_color_bg = (230, 230, 230, 255)  # 浅灰色背景，不透明 (R, G, B, A)
 
-    # batch_resize_images_exact_size(
-    #     input_directory_exact,
-    #     output_directory_exact,
-    #     exact_width,
-    #     exact_height,
-    #     fill_color=fill_color_bg,
-    # )
+    batch_resize_images_exact_size(
+        input_directory_exact,
+        output_directory_exact,
+        exact_width,
+        exact_height,
+        fill_color=fill_color_bg,
+    )
