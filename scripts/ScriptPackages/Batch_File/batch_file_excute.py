@@ -6,7 +6,6 @@
 # @Software : PyCharm
 # Description:
 import os
-
 import pymel.core as pc
 
 
@@ -96,7 +95,6 @@ class BatchMayaFile:
         radio_btn = pc.radioCollection(self.radioCol, q=True, select=True)
         for file in self.file_list:
             pc.openFile(file, force=True)  # 分别打开每个文件
-            pc.currentUnit(time="ntsc")  # maya环境帧率设置为30 fps
             exec(modify_code)  # 以字符串的形式执行代码
             # 如果为'Export File选项且存在导出路径，则执行导出命令
             if (radio_btn == "rb_export") and self.savePath:
