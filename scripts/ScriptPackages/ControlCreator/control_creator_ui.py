@@ -244,8 +244,7 @@ class ControlCreatorUI:
             shape_name = json_file.stem  # 获取文件名（不含扩展名）
             self.available_shapes.append({"name": shape_name, "path": json_file})
 
-            # 创建一个按钮代表这个形状
-            # 未来可以替换为 iconTextButton 并使用图标
+            # 创建一个iconTextButton 并使用图标
             icon_path = self.control_shapes_path / f"{shape_name}.png"  # 图标路径
             btn_label = shape_name[:15] + (
                 "..." if len(shape_name) > 15 else ""
@@ -407,18 +406,6 @@ class ControlCreatorUI:
         rot_z = self.rotate_z_field.getValue1()
         if rot_x != 0.0 or rot_y != 0.0 or rot_z != 0.0:
             orient_controller_cvs(controller_info, [rot_x, rot_y, rot_z])
-
-        # 3. 匹配
-        if self.match_to_selection_cb.getValue():
-            selection = pc.selected()
-            if selection and isinstance(
-                selection[0], (pc.nodetypes.Joint, pc.nodetypes.Transform)
-            ):
-                target_joint_or_obj = selection[0]
-                match_to_joint(controller_info, target_joint_or_obj)
-                pc.displayInfo(f"控制器已匹配到: {target_joint_or_obj.name()}")
-            else:
-                pc.warning("请求匹配，但未选择有效的目标骨骼或对象。")
 
         pc.select(offset_grp)
 
