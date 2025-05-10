@@ -394,6 +394,7 @@ class ControlCreatorUI:
             return
 
         offset_grp = controller_info["offset_group"]
+        curve_shape = controller_info["curve_transform"].getShape()
 
         # 1. 大小
         scale_val = self.scale_field.getValue1()
@@ -407,7 +408,24 @@ class ControlCreatorUI:
         if rot_x != 0.0 or rot_y != 0.0 or rot_z != 0.0:
             orient_controller_cvs(controller_info, [rot_x, rot_y, rot_z])
 
-        pc.select(offset_grp)
+        # TODO 3.颜色
+        use_index_color = self.color_mode_radio.getSelect() == 1
+        new_color_index = None
+        new_rgb_color = None
+        if use_index_color:
+            new_color_index = self.default_color_index
+        else:
+            new_rgb_color = self.current_rgb_color
+
+        # 颜色属性
+        if new_color_index is not None:  # 优先使用新指定的索引颜色
+            curve_shape.overrideEnabled.set(True)
+            curve_shape.overrideRGBColors.set(False)
+            curve_shape.overrideColor.set(new_color_index)
+        elif new_rgb_color is not None:  # 其次使用新指定的RGB颜色
+            curve_shape.overrideEnabled.set(True)
+            curve_shape.overrideRGBColors.set(True)
+            curve_shape.overrideColorRGB.set(new_rgb_color)
 
     def apply_post_process_to_selected_cmd(self, *args):
         """对场景中选中的控制器（或其offset group）应用UI中的大小和旋转设置"""
