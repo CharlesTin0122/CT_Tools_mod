@@ -67,7 +67,8 @@ def create_curve_from_data(
     Returns:
         Union[Dict[str, Any], List[Dict[str, Any]]]: 创建的曲线信息,包括offset group和curve transform
     """
-    created_curves_info = []
+    temp_curve_transforms = []  # 临时曲线变换节点列表，曲线数据有时是多条曲线，需要合并
+    created_curves_info = []  # 用于储存返回值
     for shape_data_name, curve_data in data.items():
         # 曲线命名
         transform_name = f"{base_name}_ctrl"
@@ -86,12 +87,29 @@ def create_curve_from_data(
             periodic=(form == 2),
             # name=transform_name # 先不指定名字，PyMel会自动处理，之后重命名
         )
-        # 重命名变换节点和形状节点
-        curve_transform = pc.rename(temp_curve_transform, transform_name)
-        curve_shape = curve_transform.getShape()
-        pc.rename(curve_shape, actual_shape_name)
 
-        # 恢复保存的颜色属性
+        temp_curve_transforms.append(temp_curve_transform)
+    # 合并多条曲线
+    curve_num = len(temp_curve_transforms)
+    if curve_num > 1:
+        parent_transform = temp_curve_transforms[0]
+        for i in range(1, curve_num):
+            transform = temp_curve_transforms[i]
+            child_shape = transform.getShape()
+            try:
+                pc.parent(child_shape, parent_transform, shape=True, relative=True)
+                pc.delete(transform)
+            except Exception as exc:
+                print(exc)
+
+    # 重命名变换节点
+    curve_transform = pc.rename(parent_transform, transform_name)
+    curve_shapes = curve_transform.getShapes()
+    for i, curve_shape in enumerate(curve_shapes):
+        pc.rename(curve_shape, f"{actual_shape_name}_{i}")
+
+    # 恢复保存的颜色属性
+    for curve_shape in curve_shapes:
         if new_color_index is not None:  # 优先使用新指定的索引颜色
             curve_shape.overrideEnabled.set(True)
             curve_shape.overrideRGBColors.set(False)
@@ -111,19 +129,19 @@ def create_curve_from_data(
                 # 这里我们仅作演示，如果不是RGB，则不特别设置颜色索引，除非有新传入
                 pass
 
-        # 创建并返回 offset group
-        offset_group_name = f"{curve_transform.name()}_offset"
-        offset_group = pc.group(empty=True, name=offset_group_name)
-        pc.parent(curve_transform, offset_group)
+    # 创建并返回 offset group
+    offset_group_name = f"{curve_transform.name()}_offset"
+    offset_group = pc.group(empty=True, name=offset_group_name)
+    pc.parent(curve_transform, offset_group)
 
-        # 清理曲线自身的变换 (使其相对于offset group是归零的)
-        curve_transform.translate.set(0, 0, 0)
-        curve_transform.rotate.set(0, 0, 0)
-        curve_transform.scale.set(1, 1, 1)
+    # 清理曲线自身的变换 (使其相对于offset group是归零的)
+    curve_transform.translate.set(0, 0, 0)
+    curve_transform.rotate.set(0, 0, 0)
+    curve_transform.scale.set(1, 1, 1)
 
-        created_curves_info.append(
-            {"offset_group": offset_group, "curve_transform": curve_transform}
-        )
+    created_curves_info.append(
+        {"offset_group": offset_group, "curve_transform": curve_transform}
+    )
 
     # 如果只有一个曲线被创建，直接返回其信息，否则返回列表
     return (
@@ -224,8 +242,8 @@ def adjust_controller_size(controller_info_or_node, scale_factor):
         pc.warning("adjust_controller_size需要控制器信息字典或PyNode变换节点。")
         return
 
-    curve_shape = curve_transform.getShape()
-    if not curve_shape or not isinstance(curve_shape, pc.nodetypes.NurbsCurve):
+    curve_shapes = curve_transform.getShapes()
+    if not curve_shapes or not isinstance(curve_shapes[0], pc.nodetypes.NurbsCurve):
         pc.warning(f"{curve_transform.name()} 没有有效的NURBS曲线形状。")
         return
 
@@ -236,15 +254,17 @@ def adjust_controller_size(controller_info_or_node, scale_factor):
     else:
         pc.warning("scale_factor 必须是一个数字或包含三个数字的列表/元组。")
         return
-
-    # 获取局部空间CV点坐标，，坐标是局部空间的是基于枢轴点(pivot)的位置偏移
-    cvs = curve_shape.getCVs(space="object")
-    # 坐标每个分量乘以缩放系数，缩放这个点相对于枢轴点(pivot)的位置偏移
-    scaled_cvs = [pc.dt.Point(cv[0] * s[0], cv[1] * s[1], cv[2] * s[2]) for cv in cvs]
-    # 将缩放后的数据设置到曲线
-    curve_shape.setCVs(scaled_cvs, space="object")
-    # 更新曲线显示
-    curve_shape.updateCurve()
+    for curve_shape in curve_shapes:
+        # 获取局部空间CV点坐标，，坐标是局部空间的是基于枢轴点(pivot)的位置偏移
+        cvs = curve_shape.getCVs(space="object")
+        # 坐标每个分量乘以缩放系数，缩放这个点相对于枢轴点(pivot)的位置偏移
+        scaled_cvs = [
+            pc.dt.Point(cv[0] * s[0], cv[1] * s[1], cv[2] * s[2]) for cv in cvs
+        ]
+        # 将缩放后的数据设置到曲线
+        curve_shape.setCVs(scaled_cvs, space="object")
+        # 更新曲线显示
+        curve_shape.updateCurve()
     print(f"控制器 {curve_transform.name()} 的大小已调整。")
 
 
@@ -314,8 +334,8 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
         pc.warning("orient_controller_cvs需要控制器信息字典或PyNode变换节点。")
         return
 
-    curve_shape = curve_transform.getShape()
-    if not curve_shape or not isinstance(curve_shape, pc.nodetypes.NurbsCurve):
+    curve_shapes = curve_transform.getShapes()
+    if not curve_shapes or not isinstance(curve_shapes[0], pc.nodetypes.NurbsCurve):
         pc.warning(f"{curve_transform.name()} 没有有效的NURBS曲线形状。")
         return
 
@@ -331,23 +351,24 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
 
     # PyMel的 pc.rotate 在组件模式下有时行为不符合预期，特别是pivot。
     # 使用 maya.cmds 来旋转组件通常更可靠。
-    cv_components = [
-        f"{curve_shape.name()}.cv[{i}]" for i in range(curve_shape.numCVs())
-    ]
-    if cv_components:
-        cmds.rotate(
-            rotation_xyz_degrees[0],
-            rotation_xyz_degrees[1],
-            rotation_xyz_degrees[2],
-            cv_components,
-            objectSpace=True,  # 在对象空间旋转
-            pivot=pivot_point,
-            relative=True,
-        )  # 相对旋转
-        curve_shape.updateCurve()
-        print(f"控制器 {curve_transform.name()} 的CV点已旋转。")
-    else:
-        print(f"控制器 {curve_transform.name()} 没有CV点可旋转。")
+    for curve_shape in curve_shapes:
+        cv_components = [
+            f"{curve_shape.name()}.cv[{i}]" for i in range(curve_shape.numCVs())
+        ]
+        if cv_components:
+            cmds.rotate(
+                rotation_xyz_degrees[0],
+                rotation_xyz_degrees[1],
+                rotation_xyz_degrees[2],
+                cv_components,
+                objectSpace=True,  # 在对象空间旋转
+                pivot=pivot_point,
+                relative=True,
+            )  # 相对旋转
+            curve_shape.updateCurve()
+            print(f"控制器 {curve_shape.name()} 的CV点已旋转。")
+        else:
+            print(f"控制器 {curve_shape.name()} 没有CV点可旋转。")
 
 
 # -----------------------------------------------------------------------------
