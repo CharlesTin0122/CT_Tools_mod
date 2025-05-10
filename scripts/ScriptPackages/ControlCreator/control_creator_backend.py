@@ -326,11 +326,8 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
         pc.warning("rotation_xyz_degrees 必须是一个包含三个数字的列表/元组。")
         return
 
-    # 获取曲线的旋转轴心点 (通常是 (0,0,0) 在对象空间，因为我们已经清理过变换)
-    # 注意: pc.rotate() 的 objectCenterPivot 参数在某些PyMel版本中可能不直接作用于组件。
-    # 我们需要在对象空间旋转CV点，而曲线的变换节点的translate/rotate应该是0。
-    # 因此，在对象空间中，旋转中心就是(0,0,0)。
-    pivot_point = (0, 0, 0)
+    # 获取曲线的旋转轴心点 (世界空间)
+    pivot_point = curve_transform.getRotatePivot(space="world")
 
     # PyMel的 pc.rotate 在组件模式下有时行为不符合预期，特别是pivot。
     # 使用 maya.cmds 来旋转组件通常更可靠。
