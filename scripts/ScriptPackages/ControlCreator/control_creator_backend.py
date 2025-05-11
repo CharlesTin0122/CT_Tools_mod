@@ -91,8 +91,8 @@ def create_curve_from_data(
         temp_curve_transforms.append(temp_curve_transform)
     # 合并多条曲线
     curve_num = len(temp_curve_transforms)
+    parent_transform = temp_curve_transforms[0]
     if curve_num > 1:
-        parent_transform = temp_curve_transforms[0]
         for i in range(1, curve_num):
             transform = temp_curve_transforms[i]
             child_shape = transform.getShape()
