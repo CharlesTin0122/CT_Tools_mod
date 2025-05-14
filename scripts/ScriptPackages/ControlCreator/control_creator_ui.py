@@ -83,7 +83,7 @@ class ControlCreatorUI:
 
                 # 颜色选择
                 with pc.rowLayout(
-                    nc=3, adj=2, rat=[(1, "both", 0), (2, "both", 0), (3, "both", 0)]
+                    nc=3, adj=3, rat=[(1, "both", 0), (2, "both", 0), (3, "both", 0)]
                 ):
                     pc.text(label="颜色:")
                     self.color_swatch = pc.canvas(
