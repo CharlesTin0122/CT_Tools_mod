@@ -92,9 +92,7 @@ class BatchConstrNearestObj(object):
                     closest_distance = distance  # 最近距离就是该距离
 
             # 如果最近骨骼存在,同时骨骼没有被约束,父子约束到最近的骨骼
-            if closest_obj and not pc.listConnections(
-                closest_obj, type="parentConstraint"
-            ):
+            if closest_obj:
                 pc.parentConstraint(obj, closest_obj, maintainOffset=True)  # 执行约束
                 constrain_list = f"{obj}->{closest_obj}"
                 self.constrain_list.append(constrain_list)
