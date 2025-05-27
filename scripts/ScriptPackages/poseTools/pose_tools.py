@@ -179,7 +179,7 @@ class PoseToolsUI:
                 cmds.xform(obj, matrix=matrix_list[i], worldSpace=True)
                 pc.setKeyframe(obj)
 
-    def pin_ctrl_anim(self, ctrl_list=None):
+    def pin_ctrl_anim(self, *args):
         """为选定的控制器生成pin控制动画
         原理：
         1. 为每个控制器创建一个空间定位器.
@@ -188,9 +188,7 @@ class PoseToolsUI:
         4. 反过来,定位器约束控制器,控制器便被Pin住了.
         5. 这样便可以在不破坏身体动画的前提下修改main和root控制器,一般用来处理根骨骼动画
         """
-        if ctrl_list is None:
-            ctrl_list = pc.selected()
-        self.sel_list = ctrl_list
+        self.sel_list = pc.selected()
         self.ctrl_loc_list = []
         self.ctrl_con_list = []
         for ctrl in self.sel_list:
@@ -208,12 +206,10 @@ class PoseToolsUI:
         for i, ctrl in enumerate(self.sel_list):
             pc.parentConstraint(self.ctrl_loc_list[i], ctrl, mo=True)
 
-    def bake_pined_anim(self, ctrl_list=None):
+    def bake_pined_anim(self, *args):
         """烘焙控制器动画，并删除空间定位器"""
-        if ctrl_list is None:
-            ctrl_list = self.sel_list
         pc.bakeResults(
-            ctrl_list,
+            self.sel_list,
             simulation=True,
             t=(pc.env.getMinTime(), pc.env.getMaxTime()),
             sampleBy=1,

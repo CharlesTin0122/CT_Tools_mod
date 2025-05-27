@@ -17,8 +17,8 @@ pelvis_name = "body_C0_ctl"
 
 ctrl_loc_list = []
 
-root_motion_tx = True
-root_motion_ty = False
+root_motion_tx = False
+root_motion_ty = True
 root_motion_tz = False
 
 root_motion_rx = False
