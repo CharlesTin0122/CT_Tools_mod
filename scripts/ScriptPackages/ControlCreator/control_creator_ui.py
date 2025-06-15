@@ -331,38 +331,38 @@ class ControlCreatorUI:
             # ]
 
             # 获取控制器数量
-            num_controllers = len(self.created_controllers)
+            # num_controllers = len(self.created_controllers)
 
-            if num_controllers > 1:  # 至少需要两个控制器才能形成父子关系
-                # 循环到倒数第二个控制器，因为我们要访问 i 和 i+1
-                for i in range(num_controllers - 1):
-                    # 将成为父级的控制器信息
-                    parent_controller_info = self.created_controllers[i]
-                    # 将成为子级的控制器信息
-                    child_controller_info = self.created_controllers[i + 1]
+            # if num_controllers > 1:  # 至少需要两个控制器才能形成父子关系
+            #     # 循环到倒数第二个控制器，因为我们要访问 i 和 i+1
+            #     for i in range(num_controllers - 1):
+            #         # 将成为父级的控制器信息
+            #         parent_controller_info = self.created_controllers[i]
+            #         # 将成为子级的控制器信息
+            #         child_controller_info = self.created_controllers[i + 1]
 
-                    # 通常，我们将下一个控制器的 "offset_group" 作为子对象
-                    child_to_be_parented = child_controller_info["offset_group"]
+            #         # 通常，我们将下一个控制器的 "offset_group" 作为子对象
+            #         child_to_be_parented = child_controller_info["offset_group"]
 
-                    # 而当前控制器的 "curve_transform" 作为父对象
-                    parent_object = parent_controller_info["curve_transform"]
-                    # 如果父子对象皆存在
-                    if child_to_be_parented and parent_object:
-                        try:
-                            pc.parent(child_to_be_parented, parent_object)
-                            print(
-                                f"成功将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象。"
-                            )
-                        except Exception as e:
-                            pc.warning(
-                                f"设置父子关系时出错：将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象失败。错误: {e}"
-                            )
-                    else:
-                        pc.warning(
-                            f"在索引 {i} 或 {i + 1} 处缺少有效的控制器节点信息。"
-                        )
-            else:
-                print("控制器数量不足以创建父子关系。")
+            #         # 而当前控制器的 "curve_transform" 作为父对象
+            #         parent_object = parent_controller_info["curve_transform"]
+            #         # 如果父子对象皆存在
+            #         if child_to_be_parented and parent_object:
+            #             try:
+            #                 pc.parent(child_to_be_parented, parent_object)
+            #                 print(
+            #                     f"成功将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象。"
+            #                 )
+            #             except Exception as e:
+            #                 pc.warning(
+            #                     f"设置父子关系时出错：将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象失败。错误: {e}"
+            #                 )
+            #         else:
+            #             pc.warning(
+            #                 f"在索引 {i} 或 {i + 1} 处缺少有效的控制器节点信息。"
+            #             )
+            # else:
+            #     print("控制器数量不足以创建父子关系。")
 
         # 如果没有勾选匹配选定对象，或者勾选但没有选中骨骼
         else:
