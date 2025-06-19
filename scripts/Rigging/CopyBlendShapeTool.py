@@ -6,7 +6,8 @@
 # @Software : PyCharm
 # Description:
 from importlib import reload
-from copyBlendShapeTool import copy_blendshape_tool
+from CopyBlendShapeTools import copy_blendshape_tool
+
 reload(copy_blendshape_tool)
 cbt = copy_blendshape_tool.CopyBlendShapeTool()
 cbt.create_ui()
