@@ -56,5 +56,5 @@ def copy_bs_mesh(source_mesh: nt.Transform, trans_bs_name: str):
 if __name__ == "__main__":
     # 选择源模型
     source_mesh = pc.ls(selection=True)[0]
-    trans_bs_name = "SK_Human_Male_001"
+    trans_bs_name = "SK_Human_male_01_new"
     copy_bs_mesh(source_mesh, trans_bs_name)
