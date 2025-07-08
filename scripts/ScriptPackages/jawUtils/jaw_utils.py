@@ -545,6 +545,11 @@ def create_initial_values(part, degree=1.3):
 
 
 def create_offset_follow():
+    """使用下颌骨骼(C_jaw_jnt)的X轴旋转来控制下颌骨骼的旋转偏移组(C_jaw_jnt_auto)的YZ轴位移属性，
+    通过一个单位转换节点和两个重映射值节点来实现。
+    这个功能可以让下颌在张开时跟随上颌的运动。
+    """
+    # 创建下颌属性承载节点
     jaw_attr = "jaw_attributes"
     jaw_joint = f"{CENTER}_{JAW}_{JOINT}"
     jaw_auto_grp = f"{CENTER}_{JAW}_{JOINT}_auto"
@@ -569,23 +574,65 @@ def create_offset_follow():
     unit_node = pc.createNode("unitConversion", name=f"{CENTER}_{JAW}_follow_unit")
 
     remap_y_node = pc.createNode("remapValue", name=f"{CENTER}_{JAW}_follow_y_remap")
-    pc.setAttr(f"{remap_y_node}.inputmax", 1)
+    pc.setAttr(f"{remap_y_node}.inputMax", 1)
 
     remap_z_node = pc.createNode("remapValue", name=f"{CENTER}_{JAW}_follow_z_remap")
-    pc.setAttr(f"{remap_z_node}.inputmax", 1)
+    pc.setAttr(f"{remap_z_node}.inputMax", 1)
 
     mult_y_node = pc.createNode(
         "multDoubleLinear", name=f"{CENTER}_{JAW}_follow_y_mult"
     )
     pc.setAttr(f"{mult_y_node}.input2", -1)
 
-    pc.connectAttr(f"{jaw_joint}_rx", f"{unit_node}.input")
-    pc.connectAttr(f"{unit_node}_output", f"{remap_y_node}.inputValue")
-    pc.connectAttr(f"{unit_node}_output", f"{remap_z_node}.inputValue")
+    pc.connectAttr(f"{jaw_joint}.rx", f"{unit_node}.input")
+    pc.connectAttr(f"{unit_node}.output", f"{remap_y_node}.inputValue")
+    pc.connectAttr(f"{unit_node}.output", f"{remap_z_node}.inputValue")
 
     pc.connectAttr(f"{jaw_attr}.follow_ty", f"{mult_y_node}.input1")
     pc.connectAttr(f"{jaw_attr}.follow_tz", f"{remap_z_node}.outputMax")
-    pc.connectAttr(f"{remap_y_node}.output", f"{jaw_auto_grp}.ty")
+    pc.connectAttr(f"{mult_y_node}.output", f"{remap_y_node}.outputMax")
+
+    pc.connectAttr(f"{remap_y_node}.outValue", f"{jaw_auto_grp}.ty")
+    pc.connectAttr(f"{remap_z_node}.outValue", f"{jaw_auto_grp}.tz")
+
+
+def add_seal_attrs():
+    jaw_attr = "jaw_attributes"
+    # 添加上唇密封属性
+    pc.addAttr(
+        jaw_attr,
+        longName="L_seal",
+        attributeType="double",
+        min=0,
+        max=10,
+        defaultValue=0,
+    )
+    pc.addAttr(
+        jaw_attr,
+        longName="R_seal",
+        attributeType="double",
+        min=0,
+        max=10,
+        defaultValue=0,
+    )
+
+    # 添加下唇密封属性
+    pc.addAttr(
+        jaw_attr,
+        longName="L_seal_delay",
+        attributeType="double",
+        min=0.1,
+        max=10,
+        defaultValue=4,
+    )
+    pc.addAttr(
+        jaw_attr,
+        longName="R_seal_delay",
+        attributeType="double",
+        min=0.1,
+        max=10,
+        defaultValue=4,
+    )
 
 
 def build():
@@ -598,6 +645,70 @@ def build():
     create_seal("upper")  # 创建上唇密封关节
     create_seal("lower")  # 创建下唇密封关节
     create_jaw_attrs()  # 创建下颌属性承载节点
+    create_offset_follow()  # 创建下颌偏移跟随
+    add_seal_attrs()  # 添加密封属性
     create_minor_constraints()  # 创建次级关节约束关系
     create_initial_values("upper")  # 创建上唇初始值
-    create_initial_values("lower")  # 创建下唇初始值:
+    create_initial_values("lower")  # 创建下唇初始值
+
+
+# Path: scripts/ScriptPackages/jawUtils/jaw_seal.py
+part = "upper"
+seal_token = f"{part}_seal"
+jaw_attrs = "jaw_attributes"
+lip_jnts = jaw_utils.lip_part(part)
+jnts_count = len(lip_jnts)
+# 用于储存权重值，便于Debug
+seal_driver = pc.createNode("lightInfo", name=f"C_{seal_token}_DRV")
+
+triggers = {"L": list(), "R": list()}
+
+for side in "LR":
+    # get fall off
+    delay_sub_name = f"{side}_{seal_token}_delay_sub"
+    delay_sub_node = pc.createNode("plusMinusAverage", name=delay_sub_name)
+    delay_sub_node.operation.set(2)  # 减法
+    delay_sub_node.input1D[0].set(10)
+    pc.connectAttr(f"{jaw_attrs}.{side}_seal_delay", f"{delay_sub_node}.input1D[0]")
+
+    lerp = 1 / float(jnts_count - 1)  # 线性插值
+    delay_div_name = f"{side}_{seal_token}_delay_DIV"
+    delay_div_node = pc.createNode("multDoubleLinear", name=delay_div_name)
+    delay_div_node.input2.set(lerp)
+    delay_sub_node.output1D.connect(delay_div_node.input1)
+
+    mult_triggers = list()
+    sub_triggers = list()
+    triggers[side].append(mult_triggers)
+    triggers[side].append(sub_triggers)
+
+    for index in range(jnts_count):
+        index_name = f"jaw_{index:02d}"
+        # create mult node
+        delay_mult_name = f"{index_name}_{side}_{seal_token}_delay_mult"
+        delay_mult_node = pc.createNode("multDoubleLinear", name=delay_mult_name)
+        delay_mult_node.input1.set(index)
+        delay_div_node.output.connect(delay_mult_node.input2)
+
+        mult_triggers.append(delay_mult_node)
+        # create sub node
+        delay_sub_name = f"{index_name}_{side}_{seal_token}_delay_sub"
+        delay_sub_node = pc.createNode("plusMinusAverage", name=delay_sub_name)
+        delay_mult_node.output.connect(delay_sub_node.input1D[0])
+        pc.connectAttr(f"{jaw_attrs}.{side}_seal_delay", f"{delay_sub_node}.input1D[1]")
+
+        mult_triggers.append(delay_mult_node)
+
+# connect seal trggers to driver node
+for left_index in range(jnts_count):
+    right_index = jnts_count - left_index - 1
+    index_name = f"{seal_token}_{left_index}"
+
+    l_mult_trigger, l_sub_trigger = (
+        triggers["L"][0][left_index],
+        triggers["L"][1][left_index],
+    )
+    r_mult_trigger, r_sub_trigger = (
+        triggers["R"][0][right_index],
+        triggers["R"][1][left_index],
+    )
