@@ -1,4 +1,4 @@
-import numbers  # 引入 numbers 模块来检查是否为数字
+import numbers
 import math
 
 
@@ -25,6 +25,9 @@ class Matrix3x3:
         for row in data:
             if not isinstance(row, list) or len(row) != 3:
                 return False
+            for elem in row:
+                if not isinstance(elem, numbers.Number):
+                    return False
         return True
 
     def __str__(self):
@@ -33,7 +36,6 @@ class Matrix3x3:
         """
         matrix_str = ""
         for row in self.data:
-            # 使用格式化字符串确保对齐,宽度是8位，精确到小数点后两位
             matrix_str += " ".join(f"{elem:8.2f}" for elem in row) + "\n"
         return matrix_str
 
@@ -74,34 +76,32 @@ class Matrix3x3:
         :param other: 另一个Matrix3x3对象或一个标量（int或float）。
         :return: 一个新的Matrix3x3对象。
         """
-        # 情况1: 标量乘法 (e.g., matrix * 3)
-        if isinstance(other, numbers.Number):  # 检查other是否为数字
+        if isinstance(other, numbers.Number):
+            return self._scalar_multiply(other)
+        if isinstance(other, Matrix3x3):
             result_data = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
             for i in range(3):
                 for j in range(3):
-                    result_data[i][j] = self.data[i][j] * other
-            return Matrix3x3(result_data)
-
-        # 情况2: 矩阵乘法
-        if isinstance(other, Matrix3x3):
-            result_data = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
-            for i in range(3):  # 遍历结果矩阵的每一行
-                for j in range(3):  # 遍历结果矩阵的每一列
-                    for k in range(3):  # 遍历计算当前[i][j]位置的值
-                        # 这一步是：将self的第i行第k列 × other的第k行第j列，累加到结果中
-                        # R[i][j] = A[i][0]*B[0][j] + A[i][1]*B[1][j] + A[i][2]*B[2][j]
+                    for k in range(3):
                         result_data[i][j] += self.data[i][k] * other.data[k][j]
             return Matrix3x3(result_data)
-
-        # 不支持的类型
         raise TypeError(f"不支持 Matrix3x3 和 {type(other).__name__} 之间的乘法。")
 
     def __rmul__(self, other):
         """
         重载右乘法运算符 '*'，用于处理标量在前的情况 (e.g., 3 * matrix)。
         """
-        # 这个方法会调用常规的 __mul__ 方法，避免代码重复。
-        return self.__mul__(other)
+        if isinstance(other, numbers.Number):
+            return self._scalar_multiply(other)
+        raise TypeError(f"不支持 {type(other).__name__} 和 Matrix3x3 之间的乘法。")
+
+    def _scalar_multiply(self, scalar):
+        """执行标量乘法。"""
+        result_data = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        for i in range(3):
+            for j in range(3):
+                result_data[i][j] = self.data[i][j] * scalar
+        return Matrix3x3(result_data)
 
     def multiply_vector(self, vector):
         """
@@ -136,9 +136,6 @@ class Matrix3x3:
     def create_rotation_matrix(axis, angle_rad):
         """
         创建一个绕指定轴旋转的3D旋转矩阵。
-        是静态方法 (static method)。静态方法是定义在类中的函数，但它不依赖于任何特定的实例（即它不需要 self 参数）。
-        这非常适合创建像旋转矩阵这样的“工厂”函数，因为它的目的就是生成一个新的矩阵，而不是修改一个已有的矩阵。
-
         :param axis: 旋转轴，必须是 'x', 'y', 或 'z' (不区分大小写)。
         :param angle_rad: 旋转角度，以弧度为单位。
         :return: 一个代表旋转的 Matrix3x3 对象。
@@ -146,16 +143,16 @@ class Matrix3x3:
         c = math.cos(angle_rad)
         s = math.sin(angle_rad)
 
-        axis = axis.lower()  # 转换为小写以支持 'X', 'Y', 'Z'
+        axis = axis.lower()
+        if axis not in ["x", "y", "z"]:
+            raise ValueError(f"无效的旋转轴 '{axis}'。必须是 'x', 'y' 或 'z'。")
 
         if axis == "x":
-            return Matrix3x3([[1, 0, 0], [0, c, -s], [0, s, c]])
+            return Matrix3x3([[1, 0, 0], [0, c, -房], [0, s, c]])
         elif axis == "y":
             return Matrix3x3([[c, 0, s], [0, 1, 0], [-s, 0, c]])
         elif axis == "z":
             return Matrix3x3([[c, -s, 0], [s, c, 0], [0, 0, 1]])
-        else:
-            raise ValueError("旋转轴必须是 'x', 'y', 或 'z'")
 
     @staticmethod
     def create_scale_matrix(scale_x, scale_y, scale_z):
@@ -179,29 +176,20 @@ class Matrix3x3:
         :param normal_vector: 一个定义平面的法向量，例如 [x, y, z]。
         :return: 一个代表投影的 Matrix3x3 对象。
         """
-        # 1. 确保法向量是一个单位向量（长度为1）
+        if not isinstance(normal_vector, (list, tuple)) or len(normal_vector) != 3:
+            raise ValueError("法向量必须是一个包含3个元素的列表或元组。")
+
         nx, ny, nz = normal_vector
         length_sq = nx**2 + ny**2 + nz**2
 
         if length_sq == 0:
             raise ValueError("法向量不能是零向量。")
 
-        # 如果长度不是1，则进行归一化
-        if abs(length_sq - 1.0) > 1e-9:  # 使用一个小的容差来比较浮点数
+        if not math.isclose(length_sq, 1.0, rel_tol=1e-6):
             length = math.sqrt(length_sq)
             nx /= length
             ny /= length
             nz /= length
-
-        # 2. 计算投影矩阵 P = I - n * n^T
-        #    其中 I是单位矩阵, n是单位法向量, n^T是n的转置
-        #    n * n^T (外积) 计算如下:
-        #    [[nx*nx, nx*ny, nx*nz],
-        #     [ny*nx, ny*ny, ny*nz],
-        #     [nz*nx, nz*ny, nz*nz]]
-
-        #    投影矩阵 P 的元素为:
-        #    P_ij = delta_ij - n_i * n_j   (其中 delta_ij 是克罗内克δ)
 
         data = [
             [1 - nx * nx, -nx * ny, -nx * nz],
@@ -211,8 +199,125 @@ class Matrix3x3:
 
         return Matrix3x3(data)
 
+    @staticmethod
+    def create_reflection_matrix(normal_vector):
+        """
+        创建一个绕指定平面（由法向量定义）的反射矩阵。
+        反射矩阵公式：R = I - 2 * n * n^T，其中I是单位向量， n 是平面法向量，n^T是向量转置
+        外积 n * n^T：这是法向量 n 与其转置 n^T 的矩阵乘法，结果是一个 3x3 矩阵，表示投影到法向量方向的变换。
+
+        :param normal_vector: 一个定义反射平面的法向量，例如 [x, y, z]。
+        :return: 一个代表反射的 Matrix3x3 对象。
+        """
+        if not isinstance(normal_vector, (list, tuple)) or len(normal_vector) != 3:
+            raise ValueError("法向量必须是一个包含3个元素的列表或元组。")
+
+        nx, ny, nz = normal_vector
+        length_sq = nx**2 + ny**2 + nz**2
+
+        if length_sq == 0:
+            raise ValueError("法向量不能是零向量。")
+
+        if not math.isclose(length_sq, 1.0, rel_tol=1e-6):
+            length = math.sqrt(length_sq)
+            nx /= length
+            ny /= length
+            nz /= length
+
+        # 反射矩阵公式：R = I - 2 * n * n^T
+        data = [
+            [1 - 2 * nx * nx, -2 * nx * ny, -2 * nx * nz],
+            [-2 * ny * nx, 1 - 2 * ny * ny, -2 * ny * nz],
+            [-2 * nz * nx, -2 * nz * ny, 1 - 2 * nz * nz],
+        ]
+
+        return Matrix3x3(data)
+
+    @staticmethod
+    def create_shear_matrix(axis, shear_axis, shear_factor):
+        """
+        创建一个沿指定轴的剪切矩阵。
+        例如，沿 x 轴剪切，y 方向受 x 影响：y' = y + shear_factor * x。
+
+        :param axis: 剪切的主轴，'x', 'y', 或 'z' (不区分大小写)。
+        :param shear_axis: 受影响的轴，'x', 'y', 或 'z'，且不能与主轴相同。
+        :param shear_factor: 剪切因子（float）。
+        :return: 一个代表剪切的 Matrix3x3 对象。
+        """
+        axis = axis.lower()
+        shear_axis = shear_axis.lower()
+
+        if axis not in ["x", "y", "z"] or shear_axis not in ["x", "y", "z"]:
+            raise ValueError("轴必须是 'x', 'y' 或 'z'。")
+        if axis == shear_axis:
+            raise ValueError("剪切轴不能与主轴相同。")
+
+        data = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]  # 单位矩阵
+        if axis == "x":
+            if shear_axis == "y":
+                data[1][0] = shear_factor  # y' = y + shear_factor * x
+            elif shear_axis == "z":
+                data[2][0] = shear_factor  # z' = z + shear_factor * x
+        elif axis == "y":
+            if shear_axis == "x":
+                data[0][1] = shear_factor  # x' = x + shear_factor * y
+            elif shear_axis == "z":
+                data[2][1] = shear_factor  # z' = z + shear_factor * y
+        elif axis == "z":
+            if shear_axis == "x":
+                data[0][2] = shear_factor  # x' = x + shear_factor * z
+            elif shear_axis == "y":
+                data[1][2] = shear_factor  # y' = y + shear_factor * z
+
+        return Matrix3x3(data)
+
 
 # --- 使用示例 ---
 if __name__ == "__main__":
-    # 创建一个旋转矩阵
+    # 创建两个矩阵
+    m1 = Matrix3x3([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    m2 = Matrix3x3([[9, 8, 7], [6, 5, 4], [3, 2, 1]])
+
+    # 测试加法
+    print("矩阵加法:")
+    print(m1 + m2)
+
+    # 测试标量乘法
+    print("标量乘法 (m1 * 2):")
+    print(m1 * 2)
+
+    # 测试矩阵乘法
+    print("矩阵乘法:")
+    print(m1 * m2)
+
+    # 测试向量乘法
+    vector = [1, 2, 3]
+    print("向量乘法:", m1.multiply_vector(vector))
+
+    # 测试行列式
+    print("行列式:", m1.determinant())
+
+    # 测试旋转矩阵
     rotation_matrix = Matrix3x3.create_rotation_matrix("y", math.pi / 2)
+    print("Y轴旋转矩阵 (90度):")
+    print(rotation_matrix)
+
+    # 测试缩放矩阵
+    scale_matrix = Matrix3x3.create_scale_matrix(2, 3, 4)
+    print("缩放矩阵:")
+    print(scale_matrix)
+
+    # 测试投影矩阵
+    projection_matrix = Matrix3x3.create_projection_matrix([1, 0, 0])
+    print("投影矩阵 (法向量 [1, 0, 0]):")
+    print(projection_matrix)
+
+    # 测试反射矩阵
+    reflection_matrix = Matrix3x3.create_reflection_matrix([1, 0, 0])
+    print("反射矩阵 (法向量 [1, 0, 0]):")
+    print(reflection_matrix)
+
+    # 测试剪切矩阵
+    shear_matrix = Matrix3x3.create_shear_matrix("x", "y", 2.0)
+    print("剪切矩阵 (沿 x 轴，y 方向，因子 2.0):")
+    print(shear_matrix)
