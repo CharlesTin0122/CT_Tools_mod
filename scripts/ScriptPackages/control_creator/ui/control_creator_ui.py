@@ -214,15 +214,51 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
             if search_filter and search_filter not in shape_name.lower():
                 continue
             self.available_shapes.append({"name": shape_name, "path": json_file})
-            btn_label = shape_name[:15] + ("..." if len(shape_name) > 15 else "")
-            button = QtWidgets.QPushButton(btn_label)
-            button.setFixedSize(*UIConstants.GRID_CELL_SIZE)
+
+            # 创建自定义按钮容器
+            button_widget = QtWidgets.QWidget()
+            button_layout = QtWidgets.QVBoxLayout(button_widget)
+            button_layout.setContentsMargins(2, 2, 2, 2)
+            button_layout.setSpacing(2)
+
+            # 图片标签
+            image_label = QtWidgets.QLabel()
+            image_label.setFixedSize(80, 80)
+            image_label.setAlignment(QtCore.Qt.AlignCenter)
             icon_path = self.control_shapes_path / f"{shape_name}.png"
             if icon_path.exists():
-                button.setIcon(QtGui.QIcon(str(icon_path)))
-                button.setIconSize(QtCore.QSize(80, 80))
+                pixmap = QtGui.QPixmap(str(icon_path)).scaled(
+                    80, 80, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation
+                )
+                image_label.setPixmap(pixmap)
+            else:
+                image_label.setText("无预览")
+                image_label.setStyleSheet("color: gray; font-size: 12px;")
+            button_layout.addWidget(image_label)
+
+            # 名称标签
+            name_label = QtWidgets.QLabel(shape_name)
+            name_label.setAlignment(QtCore.Qt.AlignCenter)
+            name_label.setWordWrap(True)
+            name_label.setFixedWidth(100)
+            name_label.setStyleSheet("font-size: 12px;")
+            button_layout.addWidget(name_label)
+
+            # 创建透明按钮覆盖整个容器以处理点击事件
+            button = QtWidgets.QPushButton(button_widget)
+            button.setFlat(True)
+            button.setStyleSheet(
+                "background: transparent; border: 1px solid #444; border-radius: 5px;"
+            )
+            button.setFixedSize(100, 120)
             button.clicked.connect(functools.partial(self.select_shape_cmd, json_file))
-            self.shapes_grid.addWidget(button, row, col)
+
+            # 将按钮设置为容器的布局覆盖
+            button.setParent(button_widget)
+            button.move(0, 0)
+            button.raise_()
+
+            self.shapes_grid.addWidget(button_widget, row, col)
             col += 1
             if col >= UIConstants.GRID_COLUMNS:
                 col = 0
