@@ -1,0 +1,7 @@
+class UIConstants:
+    WINDOW_WIDTH = 320
+    GRID_CELL_SIZE = (100, 100)
+    GRID_COLUMNS = 3
+    SCROLL_HEIGHT = 200
+    DEFAULT_COLOR_INDEX = 17
+    BUTTON_COLOR = (0.2, 0.6, 0.2)

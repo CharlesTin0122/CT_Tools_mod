@@ -133,7 +133,9 @@ class ControlCreatorUI:
         self.match_to_selection_cb = pc.checkBox(
             label="匹配到选中的骨骼/对象", value=True
         )
-
+        self.hierarchy_cb = pc.checkBox(
+            label="Hierarchy (控制器跟随骨骼层级)", value=False
+        )
         pc.button(
             label="创建控制器 (Create Controls)",
             h=40,
@@ -321,48 +323,6 @@ class ControlCreatorUI:
                 pc.displayInfo(
                     f"控制器 '{created_info['offset_group'].name()}' 已创建。"
                 )
-            # 父子关系控制器
-            # self.created_controllers 的结构是：
-            # [
-            #   {"offset_group": offset_grp_0_node, "curve_transform": curve_0_node}, # 索引 0
-            #   {"offset_group": offset_grp_1_node, "curve_transform": curve_1_node}, # 索引 1
-            #   {"offset_group": offset_grp_2_node, "curve_transform": curve_2_node}, # 索引 2
-            #   ...
-            # ]
-
-            # 获取控制器数量
-            # num_controllers = len(self.created_controllers)
-
-            # if num_controllers > 1:  # 至少需要两个控制器才能形成父子关系
-            #     # 循环到倒数第二个控制器，因为我们要访问 i 和 i+1
-            #     for i in range(num_controllers - 1):
-            #         # 将成为父级的控制器信息
-            #         parent_controller_info = self.created_controllers[i]
-            #         # 将成为子级的控制器信息
-            #         child_controller_info = self.created_controllers[i + 1]
-
-            #         # 通常，我们将下一个控制器的 "offset_group" 作为子对象
-            #         child_to_be_parented = child_controller_info["offset_group"]
-
-            #         # 而当前控制器的 "curve_transform" 作为父对象
-            #         parent_object = parent_controller_info["curve_transform"]
-            #         # 如果父子对象皆存在
-            #         if child_to_be_parented and parent_object:
-            #             try:
-            #                 pc.parent(child_to_be_parented, parent_object)
-            #                 print(
-            #                     f"成功将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象。"
-            #                 )
-            #             except Exception as e:
-            #                 pc.warning(
-            #                     f"设置父子关系时出错：将 '{child_to_be_parented.name()}' 设置为 '{parent_object.name()}' 的子对象失败。错误: {e}"
-            #                 )
-            #         else:
-            #             pc.warning(
-            #                 f"在索引 {i} 或 {i + 1} 处缺少有效的控制器节点信息。"
-            #             )
-            # else:
-            #     print("控制器数量不足以创建父子关系。")
 
         # 如果没有勾选匹配选定对象，或者勾选但没有选中骨骼
         else:
@@ -385,6 +345,51 @@ class ControlCreatorUI:
 
             pc.select(created_info["offset_group"])
 
+        # ----------------------------根据骨骼层级递归的创建控制器--------------------------------------
+
+        # 修改 create_controls_cmd 中匹配骨骼的逻辑
+        is_hierarchy_mode = pc.checkBox(self.hierarchy_cb, query=True, value=True)
+
+        if is_hierarchy_mode and jnts:
+            self.created_controllers = []  # 清空已创建
+            jnt_to_controller = {}  # 映射每个骨骼到它创建的控制器
+
+        def create_controller_recursive(joint):
+            # 创建控制器
+            created_info = create_curve_from_data(
+                loaded_data,
+                base_name=joint.nodeName(),
+                new_color_index=color_idx,
+                new_rgb_color=rgb_col,
+            )
+            if not created_info:
+                pc.warning(f"跳过骨骼 {joint.name()}：控制器创建失败。")
+                return None
+
+            match_to_joint(created_info, joint)
+            self.apply_post_process(created_info)
+
+            ctrl = created_info["curve_transform"]
+            offset_grp = created_info["offset_group"]
+
+            jnt_to_controller[joint] = offset_grp
+            self.created_controllers.append(created_info)
+
+            # 递归对子骨骼创建
+            for child in joint.getChildren(type="joint"):
+                child_ctrl_group = create_controller_recursive(child)
+                if child_ctrl_group:
+                    pc.parent(child_ctrl_group, ctrl)  # 控制器之间建立层级
+
+            return offset_grp
+
+        # 遍历所有选中的骨骼
+        for root_joint in jnts:
+            create_controller_recursive(root_joint)
+
+        pc.select([c["offset_group"] for c in self.created_controllers])
+        pc.displayInfo(f"共创建控制器: {len(self.created_controllers)}")
+
     def apply_post_process(self, controller_info):
         """对给定的控制器应用UI中设置的大小、旋转和匹配"""
         if not controller_info or "offset_group" not in controller_info:
@@ -405,7 +410,7 @@ class ControlCreatorUI:
         if rot_x != 0.0 or rot_y != 0.0 or rot_z != 0.0:
             orient_controller_cvs(controller_info, [rot_x, rot_y, rot_z])
 
-        # TODO 3.颜色
+        # 3.颜色
         use_index_color = self.color_mode_radio.getSelect() == 1
         new_color_index = None
         new_rgb_color = None
@@ -424,6 +429,11 @@ class ControlCreatorUI:
                 curve_shape.overrideEnabled.set(True)
                 curve_shape.overrideRGBColors.set(True)
                 curve_shape.overrideColorRGB.set(new_rgb_color)
+        # 4.重置UI属性
+        self.scale_field.setValue1(1)
+        self.rotate_x_field.setValue1(0)
+        self.rotate_y_field.setValue1(0)
+        self.rotate_z_field.setValue1(0)
 
     def apply_post_process_to_selected_cmd(self, *args):
         """对场景中选中的控制器（或其offset group）应用UI中的大小和旋转设置"""
