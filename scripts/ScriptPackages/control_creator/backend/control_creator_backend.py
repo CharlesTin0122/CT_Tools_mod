@@ -122,19 +122,10 @@ def adjust_controller_size(controller_info_or_node, scale_factor):
     if len(s) != 3:
         pc.warning("scale_factor 必须是数字或三元组。")
         return
-    # 构建缩放矩阵
-    scale_matrix = dt.Matrix(
-        [[s[0], 0, 0, 0], [0, s[1], 0, 0], [0, 0, s[2], 0], [0, 0, 0, 1]]
-    )
-    pivot_point = curve_transform.getRotatePivot(space="object")
+    # 使用 pc.xform 调整 CV 点，支持撤销
     for curve_shape in curve_shapes:
-        cvs = curve_shape.getCVs(space="object")
-        scaled_cvs = []
-        for cv in cvs:
-            cv_vec = dt.Vector(cv) - pivot_point
-            scaled_vec = cv_vec * scale_matrix + pivot_point
-            scaled_cvs.append(scaled_vec)
-        curve_shape.setCVs(scaled_cvs, space="object")
+        for i in range(curve_shape.numCVs()):
+            pc.xform(curve_shape.cv[i], scale=s, relative=True)
         curve_shape.updateCurve()
     pc.displayInfo(f"控制器 {curve_transform.name()} 的大小已调整。")
 
@@ -176,19 +167,27 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
     ):
         pc.warning("rotation_xyz_degrees 必须是包含三个数字的列表/元组。")
         return
-    rot_rad = [math.radians(deg) for deg in rotation_xyz_degrees]
-    rot_matrix = dt.Matrix(dt.EulerRotation(rot_rad, unit="radians").asMatrix())
-    pivot_point = curve_transform.getRotatePivot(space="object")
-    for curve_shape in curve_shapes:
-        cvs = curve_shape.getCVs(space="object")
-        transformed_cvs = []
-        for cv in cvs:
-            cv_vec = dt.Vector(cv) - pivot_point
-            rotated_vec = cv_vec * rot_matrix + pivot_point
-            transformed_cvs.append(rotated_vec)
-        curve_shape.setCVs(transformed_cvs, space="object")
-        curve_shape.updateCurve()
-        pc.displayInfo(f"控制器 {curve_shape.name()} 的 CV 点已旋转。")
+    # 开启撤销块
+    pc.undoInfo(openChunk=True, chunkName="OrientControllerCVs")
+    try:
+        # 构建旋转矩阵
+        rot_rad = [math.radians(deg) for deg in rotation_xyz_degrees]
+        rot_matrix = dt.Matrix(dt.EulerRotation(rot_rad, unit="radians").asMatrix())
+        pivot_point = curve_transform.getRotatePivot(space="object")
+        for curve_shape in curve_shapes:
+            cvs = curve_shape.getCVs(space="object")
+            transformed_cvs = []
+            for cv in cvs:
+                # 相对于 pivot_point 旋转
+                cv_vec = dt.Vector(cv) - pivot_point
+                rotated_vec = cv_vec * rot_matrix + pivot_point
+                transformed_cvs.append(rotated_vec)
+            # 使用 setCVs 更新 CV 点，支持撤销
+            curve_shape.setCVs(transformed_cvs, space="object")
+            curve_shape.updateCurve()
+            pc.displayInfo(f"控制器 {curve_shape.name()} 的 CV 点已旋转。")
+    finally:
+        pc.undoInfo(closeChunk=True)
 
 
 def _get_curve_transform(controller_info_or_node):

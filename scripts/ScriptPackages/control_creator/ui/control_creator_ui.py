@@ -363,26 +363,31 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         """应用大小、旋转和颜色设置"""
         if not controller_info or "offset_group" not in controller_info:
             return
-        scale_val = self.scale_field.value()
-        if scale_val != 1.0:
-            adjust_controller_size(controller_info, scale_val)
-        rot_x = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_x_field").value()
-        rot_y = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_y_field").value()
-        rot_z = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").value()
-        if rot_x != 0.0 or rot_y != 0.0 or rot_z != 0.0:
-            orient_controller_cvs(controller_info, [rot_x, rot_y, rot_z])
-        curve_shapes = controller_info["curve_transform"].getShapes()
-        for curve_shape in curve_shapes:
-            self.color_manager.apply_color_to_curve(
-                curve_shape,
-                {},
-                self.color_manager.default_color_index
-                if self.color_manager.use_index_mode
-                else None,
-                self.color_manager.current_rgb_color
-                if not self.color_manager.use_index_mode
-                else None,
-            )
+        # 开启撤销块
+        pc.undoInfo(openChunk=True, chunkName="ApplyPostProcess")
+        try:
+            scale_val = self.scale_field.value()
+            if scale_val != 1.0:
+                adjust_controller_size(controller_info, scale_val)
+            rot_x = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_x_field").value()
+            rot_y = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_y_field").value()
+            rot_z = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").value()
+            if rot_x != 0.0 or rot_y != 0.0 or rot_z != 0.0:
+                orient_controller_cvs(controller_info, [rot_x, rot_y, rot_z])
+            curve_shapes = controller_info["curve_transform"].getShapes()
+            for curve_shape in curve_shapes:
+                self.color_manager.apply_color_to_curve(
+                    curve_shape,
+                    {},
+                    self.color_manager.default_color_index
+                    if self.color_manager.use_index_mode
+                    else None,
+                    self.color_manager.current_rgb_color
+                    if not self.color_manager.use_index_mode
+                    else None,
+                )
+        finally:
+            pc.undoInfo(closeChunk=True)
 
     def apply_post_process_to_selected_cmd(self):
         """对选中的控制器应用后处理"""
@@ -390,34 +395,45 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         if not selected_nodes:
             pc.warning("请先选择控制器（offset group 或 transform 节点）。")
             return
-        progress = pc.progressWindow(
-            title="应用后处理", maxValue=len(selected_nodes), isInterruptable=True
-        )
+        # 开启撤销块
+        pc.undoInfo(openChunk=True, chunkName="ApplyPostProcessToSelected")
         try:
-            # 保存 UI 输入值
-            scale_val = self.scale_field.value()
-            rot_x = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_x_field").value()
-            rot_y = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_y_field").value()
-            rot_z = self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").value()
-            for i, node in enumerate(selected_nodes):
-                if pc.progressWindow(query=True, isCancelled=True):
-                    break
-                pc.progressWindow(
-                    edit=True, progress=i, status=f"处理控制器: {node.name()}"
-                )
-                controller_info = self._get_controller_info_from_node(node)
-                if not controller_info:
-                    pc.warning(f"跳过 {node.name()}：不是有效的控制器结构。")
-                    continue
-                pc.displayInfo(f"对 {node.name()} 应用后处理...")
-                self.apply_post_process(controller_info)
+            progress = pc.progressWindow(
+                title="应用后处理", maxValue=len(selected_nodes), isInterruptable=True
+            )
+            try:
+                # 保存 UI 输入值
+                scale_val = self.scale_field.value()
+                rot_x = self.findChild(
+                    QtWidgets.QDoubleSpinBox, "rotate_x_field"
+                ).value()
+                rot_y = self.findChild(
+                    QtWidgets.QDoubleSpinBox, "rotate_y_field"
+                ).value()
+                rot_z = self.findChild(
+                    QtWidgets.QDoubleSpinBox, "rotate_z_field"
+                ).value()
+                for i, node in enumerate(selected_nodes):
+                    if pc.progressWindow(query=True, isCancelled=True):
+                        break
+                    pc.progressWindow(
+                        edit=True, progress=i, status=f"处理控制器: {node.name()}"
+                    )
+                    controller_info = self._get_controller_info_from_node(node)
+                    if not controller_info:
+                        pc.warning(f"跳过 {node.name()}：不是有效的控制器结构。")
+                        continue
+                    pc.displayInfo(f"对 {node.name()} 应用后处理...")
+                    self.apply_post_process(controller_info)
+            finally:
+                pc.progressWindow(endProgress=True)
             # 在所有控制器处理后再重置 UI
             self.scale_field.setValue(1.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_x_field").setValue(0.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_y_field").setValue(0.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").setValue(0.0)
         finally:
-            pc.progressWindow(endProgress=True)
+            pc.undoInfo(closeChunk=True)
 
     def _get_controller_info_from_node(self, node):
         """从节点获取控制器信息"""
