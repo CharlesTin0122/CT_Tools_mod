@@ -77,12 +77,16 @@ def write_json_data(json_data: dict, json_name: str, subfolder="control_shapes")
         with open(target_path, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=4)
         pc.displayInfo(f"控制器形状已保存到: {target_path}")
+        return True
     except PermissionError:
         pc.error(f"无权限写入文件: {target_path}")
+        return False
     except json.JSONEncodeError:
         pc.error(f"JSON 数据编码失败: {json_data}")
+        return False
     except Exception as e:
         pc.error(f"写入 JSON 文件时发生未知错误: {e}")
+        return False
 
 
 def read_json_data(json_name: str, subfolder="control_shapes"):
@@ -98,11 +102,13 @@ def read_json_data(json_name: str, subfolder="control_shapes"):
             return json.load(f)
     except json.JSONDecodeError:
         pc.error(f"JSON 文件格式错误: {target_path}")
+        return None
     except PermissionError:
         pc.error(f"无权限读取文件: {target_path}")
+        return None
     except Exception as e:
         pc.error(f"读取 JSON 文件时发生未知错误: {e}")
-    return None
+        return None
 
 
 def adjust_controller_size(controller_info_or_node, scale_factor):
@@ -250,16 +256,18 @@ def save_controller_shape(node, json_name, subfolder="control_shapes"):
             pc.displayInfo("保存已取消")
             return False
 
-    write_json_data(json_data, json_name, subfolder)
+    json_success = write_json_data(json_data, json_name, subfolder)
+    if not json_success:
+        return False
 
     # 生成截图
     png_path = json_path.with_suffix(".png")
     try:
         # 保存当前视口设置
         current_panel = pc.getPanel(withFocus=True)
-        if not current_panel:
-            pc.error("无法获取当前视口")
-            return False
+        if not current_panel or not pc.getPanel(typeOf=current_panel) == "modelPanel":
+            pc.warning("无有效的视口，无法生成截图")
+            return True  # JSON 已保存，返回 True
 
         # 隔离控制器以获得干净截图
         pc.isolateSelect(current_panel, state=1)
@@ -269,30 +277,46 @@ def save_controller_shape(node, json_name, subfolder="control_shapes"):
         # 调整相机以聚焦控制器
         pc.viewFit(curve_transform, animate=False)
 
+        # 保存当前显示设置并优化截图环境
+        original_hud = pc.headsUpDisplay(q=True, listHUD=True)
+        original_show = {
+            "grid": pc.modelEditor(current_panel, q=True, grid=True),
+            "nurbsCurves": pc.modelEditor(current_panel, q=True, nurbsCurves=True),
+        }
+        pc.headsUpDisplay(removeAll=True)
+        pc.modelEditor(current_panel, e=True, grid=False, nurbsCurves=True)
+
         # 使用 playblast 捕获截图
         pc.playblast(
             filename=str(png_path),
-            format="png",
+            format="image",
+            compression="png",
             widthHeight=[80, 80],
             viewer=False,
-            frame=[1],
             offScreen=True,
             percent=100,
             quality=90,
+            forceOverwrite=True,
         )
 
-        # 恢复视口
-        pc.isolateSelect(current_panel, state=0)
         pc.displayInfo(f"截图已保存到: {png_path}")
         return True
 
     except Exception as e:
-        pc.error(f"生成截图失败: {e}")
-        return False
+        pc.warning(f"生成截图失败: {e}")
+        return True  # JSON 已保存，返回 True
     finally:
-        # 清理隔离选择
+        # 恢复视口
         if current_panel:
             pc.isolateSelect(current_panel, state=0)
+            pc.modelEditor(
+                current_panel,
+                e=True,
+                grid=original_show.get("grid", True),
+                nurbsCurves=original_show.get("nurbsCurves", True),
+            )
+            for hud in original_hud or []:
+                pc.headsUpDisplay(hud, e=True, visible=True)
             pc.select(clear=True)
 
 
