@@ -1,5 +1,6 @@
 import json
 import math
+import maya.cmds as cmds
 import pymel.core as pc
 import pymel.core.datatypes as dt
 from pathlib import Path
@@ -172,23 +173,30 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
     ):
         pc.warning("rotation_xyz_degrees 必须是包含三个数字的列表/元组。")
         return
-    pc.undoInfo(openChunk=True, chunkName="OrientControllerCVs")
-    try:
-        rot_rad = [math.radians(deg) for deg in rotation_xyz_degrees]
-        rot_matrix = dt.Matrix(dt.EulerRotation(rot_rad, unit="radians").asMatrix())
-        pivot_point = curve_transform.getRotatePivot(space="object")
-        for curve_shape in curve_shapes:
-            cvs = curve_shape.getCVs(space="object")
-            transformed_cvs = []
-            for cv in cvs:
-                cv_vec = dt.Vector(cv) - pivot_point
-                rotated_vec = cv_vec * rot_matrix + pivot_point
-                transformed_cvs.append(rotated_vec)
-            curve_shape.setCVs(transformed_cvs, space="object")
+
+    # 获取曲线的旋转轴心点 (世界空间)
+    pivot_point = curve_transform.getRotatePivot(space="world")
+
+    # PyMel的 pc.rotate 在组件模式下有时行为不符合预期，特别是pivot。
+    # 使用 maya.cmds 来旋转组件通常更可靠。
+    for curve_shape in curve_shapes:
+        cv_components = [
+            f"{curve_shape.name()}.cv[{i}]" for i in range(curve_shape.numCVs())
+        ]
+        if cv_components:
+            cmds.rotate(
+                rotation_xyz_degrees[0],
+                rotation_xyz_degrees[1],
+                rotation_xyz_degrees[2],
+                cv_components,
+                objectSpace=True,  # 在对象空间旋转
+                pivot=pivot_point,
+                relative=True,
+            )  # 相对旋转
             curve_shape.updateCurve()
-            pc.displayInfo(f"控制器 {curve_shape.name()} 的 CV 点已旋转。")
-    finally:
-        pc.undoInfo(closeChunk=True)
+            print(f"控制器 {curve_shape.name()} 的CV点已旋转。")
+        else:
+            print(f"控制器 {curve_shape.name()} 没有CV点可旋转。")
 
 
 def _get_curve_transform(controller_info_or_node):
