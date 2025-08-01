@@ -122,7 +122,6 @@ def adjust_controller_size(controller_info_or_node, scale_factor):
     if len(s) != 3:
         pc.warning("scale_factor 必须是数字或三元组。")
         return
-    # 使用 pc.xform 调整 CV 点，支持撤销
     for curve_shape in curve_shapes:
         for i in range(curve_shape.numCVs()):
             pc.xform(curve_shape.cv[i], scale=s, relative=True)
@@ -167,10 +166,8 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
     ):
         pc.warning("rotation_xyz_degrees 必须是包含三个数字的列表/元组。")
         return
-    # 开启撤销块
     pc.undoInfo(openChunk=True, chunkName="OrientControllerCVs")
     try:
-        # 构建旋转矩阵
         rot_rad = [math.radians(deg) for deg in rotation_xyz_degrees]
         rot_matrix = dt.Matrix(dt.EulerRotation(rot_rad, unit="radians").asMatrix())
         pivot_point = curve_transform.getRotatePivot(space="object")
@@ -178,11 +175,9 @@ def orient_controller_cvs(controller_info_or_node, rotation_xyz_degrees):
             cvs = curve_shape.getCVs(space="object")
             transformed_cvs = []
             for cv in cvs:
-                # 相对于 pivot_point 旋转
                 cv_vec = dt.Vector(cv) - pivot_point
                 rotated_vec = cv_vec * rot_matrix + pivot_point
                 transformed_cvs.append(rotated_vec)
-            # 使用 setCVs 更新 CV 点，支持撤销
             curve_shape.setCVs(transformed_cvs, space="object")
             curve_shape.updateCurve()
             pc.displayInfo(f"控制器 {curve_shape.name()} 的 CV 点已旋转。")
@@ -207,6 +202,120 @@ def _get_curve_transform(controller_info_or_node):
                 return child
     pc.warning("无法找到有效的曲线变换节点。")
     return None
+
+
+def save_controller_shape(node, json_name, subfolder="control_shapes"):
+    """保存控制器形状为 JSON 文件并生成 PNG 截图"""
+    # 获取曲线变换节点
+    controller_info = _get_controller_info_from_node(node)
+    if not controller_info or not controller_info.get("curve_transform"):
+        pc.error(f"选中的节点 {node.name()} 不是有效的控制器")
+        return False
+
+    curve_transform = controller_info["curve_transform"]
+    curve_shapes = curve_transform.getShapes()
+    if not curve_shapes or not all(
+        isinstance(s, pc.nodetypes.NurbsCurve) for s in curve_shapes
+    ):
+        pc.error(f"{curve_transform.name()} 没有有效的 NURBS 曲线形状")
+        return False
+
+    # 提取曲线数据
+    json_data = {}
+    for i, curve_shape in enumerate(curve_shapes):
+        shape_data = extract_curve_data(curve_shape)
+        # 添加颜色信息
+        shape_data["overrideEnabled"] = curve_shape.overrideEnabled.get()
+        shape_data["overrideRGBColors"] = curve_shape.overrideRGBColors.get()
+        if shape_data["overrideRGBColors"]:
+            shape_data["overrideColorRGB"] = list(curve_shape.overrideColorRGB.get())
+        else:
+            shape_data["overrideColor"] = curve_shape.overrideColor.get()
+        json_data[f"shape_{i}"] = shape_data
+
+    # 保存 JSON 文件
+    json_path = PathManager.get_control_shapes_dir(subfolder) / (
+        json_name if json_name.endswith(".json") else f"{json_name}.json"
+    )
+    if json_path.exists():
+        result = pc.confirmDialog(
+            title="文件已存在",
+            message=f"文件 {json_name}.json 已存在，是否覆盖？",
+            button=["是", "否"],
+            defaultButton="是",
+            cancelButton="否",
+            dismissString="否",
+        )
+        if result != "是":
+            pc.displayInfo("保存已取消")
+            return False
+
+    write_json_data(json_data, json_name, subfolder)
+
+    # 生成截图
+    png_path = json_path.with_suffix(".png")
+    try:
+        # 保存当前视口设置
+        current_panel = pc.getPanel(withFocus=True)
+        if not current_panel:
+            pc.error("无法获取当前视口")
+            return False
+
+        # 隔离控制器以获得干净截图
+        pc.isolateSelect(current_panel, state=1)
+        pc.isolateSelect(current_panel, addSelected=True)
+        pc.select(curve_transform)
+
+        # 调整相机以聚焦控制器
+        pc.viewFit(curve_transform, animate=False)
+
+        # 使用 playblast 捕获截图
+        pc.playblast(
+            filename=str(png_path),
+            format="png",
+            widthHeight=[80, 80],
+            viewer=False,
+            frame=[1],
+            offScreen=True,
+            percent=100,
+            quality=90,
+        )
+
+        # 恢复视口
+        pc.isolateSelect(current_panel, state=0)
+        pc.displayInfo(f"截图已保存到: {png_path}")
+        return True
+
+    except Exception as e:
+        pc.error(f"生成截图失败: {e}")
+        return False
+    finally:
+        # 清理隔离选择
+        if current_panel:
+            pc.isolateSelect(current_panel, state=0)
+            pc.select(clear=True)
+
+
+def _get_controller_info_from_node(node):
+    """从节点获取控制器信息（与 UI 一致）"""
+    if not isinstance(node, pc.nodetypes.Transform):
+        return None
+    temp_info = {}
+    if node.name().endswith("_offset"):
+        temp_info["offset_group"] = node
+        children_curves = [
+            c
+            for c in node.getChildren(type="transform")
+            if c.getShape(type="nurbsCurve")
+        ]
+        if children_curves:
+            temp_info["curve_transform"] = children_curves[0]
+    elif node.getShape(type="nurbsCurve"):
+        temp_info["curve_transform"] = node
+        parent = node.getParent()
+        if parent and parent.name().endswith("_offset"):
+            temp_info["offset_group"] = parent
+    return temp_info if temp_info.get("curve_transform") else None
 
 
 def run_control_creator_example():

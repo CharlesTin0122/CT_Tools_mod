@@ -11,7 +11,10 @@ from ..backend.control_creator_backend import (
     adjust_controller_size,
     match_to_joint,
     orient_controller_cvs,
+    save_controller_shape,
 )
+
+_ui_instance = None
 
 
 class ControlCreatorUI(QtWidgets.QMainWindow):
@@ -27,6 +30,7 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         self.created_controllers = []
         self.color_manager = ColorManager(UIConstants.DEFAULT_COLOR_INDEX)
         self._build_ui()
+        pc.displayInfo("ControlCreatorUI 实例已创建")
 
     def _build_ui(self):
         """构建主 UI"""
@@ -41,6 +45,7 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         self._build_shapes_grid()
         self._build_options_frame()
         self._build_action_buttons()
+        self._build_save_shape_frame()
 
     def _build_menu(self):
         """构建菜单栏"""
@@ -161,6 +166,26 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         self.main_layout.addWidget(self.hierarchy_cb)
         self.main_layout.addWidget(create_button)
         self.main_layout.addWidget(post_process_button)
+
+    def _build_save_shape_frame(self):
+        """构建保存控制器形状区域"""
+        save_frame = QtWidgets.QGroupBox("保存控制器形状")
+        save_layout = QtWidgets.QHBoxLayout(save_frame)
+        save_layout.setSpacing(5)
+
+        name_label = QtWidgets.QLabel("形状名称：")
+        self.save_name_field = QtWidgets.QLineEdit()
+        self.save_name_field.setPlaceholderText("输入形状名称...")
+        save_button = QtWidgets.QPushButton("保存形状")
+        save_button.setFixedHeight(30)
+        save_button.clicked.connect(self.save_controller_shape_cmd)
+        save_button.setToolTip("保存选中的控制器形状为 JSON 和 PNG 文件")
+
+        save_layout.addWidget(name_label)
+        save_layout.addWidget(self.save_name_field)
+        save_layout.addWidget(save_button)
+        save_layout.addStretch()
+        self.main_layout.addWidget(save_frame)
         self.main_layout.addStretch()
 
     def update_color_swatch(self):
@@ -215,13 +240,11 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
                 continue
             self.available_shapes.append({"name": shape_name, "path": json_file})
 
-            # 创建自定义按钮容器
             button_widget = QtWidgets.QWidget()
             button_layout = QtWidgets.QVBoxLayout(button_widget)
             button_layout.setContentsMargins(2, 2, 2, 2)
             button_layout.setSpacing(2)
 
-            # 图片标签
             image_label = QtWidgets.QLabel()
             image_label.setFixedSize(80, 80)
             image_label.setAlignment(QtCore.Qt.AlignCenter)
@@ -236,7 +259,6 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
                 image_label.setStyleSheet("color: gray; font-size: 12px;")
             button_layout.addWidget(image_label)
 
-            # 名称标签
             name_label = QtWidgets.QLabel(shape_name)
             name_label.setAlignment(QtCore.Qt.AlignCenter)
             name_label.setWordWrap(True)
@@ -244,7 +266,6 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
             name_label.setStyleSheet("font-size: 12px;")
             button_layout.addWidget(name_label)
 
-            # 创建透明按钮覆盖整个容器以处理点击事件
             button = QtWidgets.QPushButton(button_widget)
             button.setFlat(True)
             button.setStyleSheet(
@@ -253,7 +274,6 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
             button.setFixedSize(100, 120)
             button.clicked.connect(functools.partial(self.select_shape_cmd, json_file))
 
-            # 将按钮设置为容器的布局覆盖
             button.setParent(button_widget)
             button.move(0, 0)
             button.raise_()
@@ -399,7 +419,6 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         """应用大小、旋转和颜色设置"""
         if not controller_info or "offset_group" not in controller_info:
             return
-        # 开启撤销块
         pc.undoInfo(openChunk=True, chunkName="ApplyPostProcess")
         try:
             scale_val = self.scale_field.value()
@@ -431,14 +450,12 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         if not selected_nodes:
             pc.warning("请先选择控制器（offset group 或 transform 节点）。")
             return
-        # 开启撤销块
         pc.undoInfo(openChunk=True, chunkName="ApplyPostProcessToSelected")
         try:
             progress = pc.progressWindow(
                 title="应用后处理", maxValue=len(selected_nodes), isInterruptable=True
             )
             try:
-                # 保存 UI 输入值
                 scale_val = self.scale_field.value()
                 rot_x = self.findChild(
                     QtWidgets.QDoubleSpinBox, "rotate_x_field"
@@ -463,13 +480,37 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
                     self.apply_post_process(controller_info)
             finally:
                 pc.progressWindow(endProgress=True)
-            # 在所有控制器处理后再重置 UI
             self.scale_field.setValue(1.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_x_field").setValue(0.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_y_field").setValue(0.0)
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").setValue(0.0)
         finally:
             pc.undoInfo(closeChunk=True)
+
+    def save_controller_shape_cmd(self):
+        """保存选中的控制器形状"""
+        selected_nodes = pc.selected(type="transform")
+        if not selected_nodes:
+            pc.warning("请先选择一个控制器（offset group 或 transform 节点）。")
+            return
+        shape_name = self.save_name_field.text().strip()
+        if not shape_name:
+            pc.warning("请输入形状名称。")
+            return
+        # 只处理第一个选中的控制器
+        controller_info = self._get_controller_info_from_node(selected_nodes[0])
+        if not controller_info:
+            pc.warning(f"选中的节点 {selected_nodes[0].name()} 不是有效的控制器结构。")
+            return
+        # 保存形状
+        success = save_controller_shape(controller_info["curve_transform"], shape_name)
+        if success:
+            # 刷新形状网格
+            self.populate_shapes_grid()
+            self.save_name_field.clear()
+            pc.displayInfo(f"控制器形状 '{shape_name}' 已保存。")
+        else:
+            pc.warning(f"保存控制器形状 '{shape_name}' 失败。")
 
     def _get_controller_info_from_node(self, node):
         """从节点获取控制器信息"""
@@ -492,20 +533,46 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
                 temp_info["offset_group"] = parent
         return temp_info if temp_info.get("curve_transform") else None
 
+    def closeEvent(self, event):
+        """处理窗口关闭事件，清理 UI 实例"""
+        global _ui_instance
+        _ui_instance = None
+        pc.displayInfo("ControlCreatorUI 实例已销毁")
+        super(ControlCreatorUI, self).closeEvent(event)
+
 
 def show_control_creator_ui():
-    """启动 UI"""
-    app = QtWidgets.QApplication.instance()
-    if not app:
-        app = QtWidgets.QApplication([])
+    """启动 UI，确保单例"""
+    global _ui_instance
+    if _ui_instance is not None and _ui_instance.isVisible():
+        pc.displayInfo("ControlCreatorUI 已存在，激活现有窗口")
+        _ui_instance.raise_()
+        _ui_instance.activateWindow()
+        return _ui_instance
+
     from shiboken2 import wrapInstance
     import maya.OpenMayaUI as omui
 
     main_window_ptr = omui.MQtUtil.mainWindow()
+    if not main_window_ptr:
+        pc.warning("无法获取 Maya 主窗口")
+        return None
     main_window = wrapInstance(int(main_window_ptr), QtWidgets.QMainWindow)
-    ui = ControlCreatorUI(parent=main_window)
-    ui.show()
-    return ui
+
+    app = QtWidgets.QApplication.instance()
+    if not app:
+        pc.displayInfo("创建新的 QApplication 实例")
+        app = QtWidgets.QApplication([])
+
+    if _ui_instance is None:
+        _ui_instance = ControlCreatorUI(parent=main_window)
+        pc.displayInfo("创建新的 ControlCreatorUI 实例")
+    else:
+        pc.displayInfo("重用现有的 ControlCreatorUI 实例")
+        _ui_instance.setParent(main_window)
+
+    _ui_instance.show()
+    return _ui_instance
 
 
 if __name__ == "__main__":
