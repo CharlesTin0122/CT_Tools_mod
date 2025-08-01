@@ -261,42 +261,53 @@ def save_controller_shape(node, json_name, subfolder="control_shapes"):
         return False
 
     # 生成截图
-    png_path = json_path.with_suffix(".png")
+    png_path = json_path.with_suffix(".png")  # 移除.json后缀
+    original_show = {}
+    current_panel = pc.getPanel(withFocus=True)
+
     try:
-        # 保存当前视口设置
-        current_panel = pc.getPanel(withFocus=True)
         if not current_panel or not pc.getPanel(typeOf=current_panel) == "modelPanel":
             pc.warning("无有效的视口，无法生成截图")
-            return True  # JSON 已保存，返回 True
+            return True
 
         # 隔离控制器以获得干净截图
         pc.isolateSelect(current_panel, state=1)
-        pc.isolateSelect(current_panel, addSelected=True)
+        # 确保选中的是控制器变换节点
         pc.select(curve_transform)
+        pc.isolateSelect(current_panel, addSelected=True)
 
         # 调整相机以聚焦控制器
         pc.viewFit(curve_transform, animate=False)
 
         # 保存当前显示设置并优化截图环境
-        original_hud = pc.headsUpDisplay(q=True, listHUD=True)
+        # 将所有需要恢复的设置都保存在 original_show 字典中
         original_show = {
             "grid": pc.modelEditor(current_panel, q=True, grid=True),
             "nurbsCurves": pc.modelEditor(current_panel, q=True, nurbsCurves=True),
+            "headsUpDisplay": pc.modelEditor(
+                current_panel, q=True, headsUpDisplay=True
+            ),  # <-- 正确获取HUD可见性的方法
         }
-        pc.headsUpDisplay(removeAll=True)
-        pc.modelEditor(current_panel, e=True, grid=False, nurbsCurves=True)
 
+        # 使用 modelEditor 一次性关闭所有不需要的元素
+        pc.modelEditor(
+            current_panel, e=True, grid=False, nurbsCurves=True, headsUpDisplay=False
+        )
+        current_frame = pc.currentTime(q=True)
         # 使用 playblast 捕获截图
         pc.playblast(
-            filename=str(png_path),
+            completeFilename=str(png_path),
             format="image",
             compression="png",
-            widthHeight=[80, 80],
+            framePadding=0,
+            widthHeight=[512, 512],
             viewer=False,
             offScreen=True,
             percent=100,
             quality=90,
             forceOverwrite=True,
+            startTime=current_frame,
+            endTime=current_frame,
         )
 
         pc.displayInfo(f"截图已保存到: {png_path}")
@@ -304,19 +315,20 @@ def save_controller_shape(node, json_name, subfolder="control_shapes"):
 
     except Exception as e:
         pc.warning(f"生成截图失败: {e}")
-        return True  # JSON 已保存，返回 True
+        return True
     finally:
         # 恢复视口
-        if current_panel:
+        if current_panel and original_show:  # 确保 original_show 已被赋值
             pc.isolateSelect(current_panel, state=0)
             pc.modelEditor(
                 current_panel,
                 e=True,
                 grid=original_show.get("grid", True),
                 nurbsCurves=original_show.get("nurbsCurves", True),
+                headsUpDisplay=original_show.get(
+                    "headsUpDisplay", True
+                ),  # <-- 恢复HUD可见性
             )
-            for hud in original_hud or []:
-                pc.headsUpDisplay(hud, e=True, visible=True)
             pc.select(clear=True)
 
 
