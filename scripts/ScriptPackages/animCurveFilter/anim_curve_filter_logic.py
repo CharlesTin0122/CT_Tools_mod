@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
-"""
-@FileName      : anim_curve_filter_refactored.py
-@DateTime      : 2025/08/21
-@Author        : 编码助手 (Gemini)
-@Contact       :
-@Software      : Maya 2023+
-@PythonVersion : python 3.9+
-@Libraries     : PySide2, Maya Python API 2.0
+# -*- encoding: utf-8 -*-
 
-重构说明:
-    1. UI界面使用 PySide2 重写，提供了更好的用户体验和扩展性。
-    2. 核心动画曲线操作逻辑使用 Maya Python API 2.0 重写，显著提升了处理大量关键帧时的性能和流畅度。
-    3. 保留了原始脚本的所有核心功能，并优化了交互逻辑。
-    4. 增加了撤销(Undo)功能，每次拖动滑条的操作都可以被撤销。
-    5. 使用了更清晰的结构和详细的注释，便于理解和维护。
+"""
+@File    :   anim_curve_filter_logic.py
+@Time    :   2025/08/25 17:49:07
+@Author  :   Charles Tian
+@Version :   1.0
+@Contact :   tianchao0533@gmail.com
+@Desc    :   当前文件作用
 
 使用方法：
     1. 将此文件放入 Maya 脚本路径下，例如："\\Documents\\maya\\20xx\\scripts"
@@ -22,184 +15,11 @@
        anim_curve_filter_refactored.show_ui()
 """
 
-import sys
-from functools import partial
-
-from Qt import QtWidgets, QtCore, QtGui
-
 import maya.cmds as cmds
 from maya.api import OpenMaya as om
 from maya.api import OpenMayaAnim as oma
 
-
-def maya_main_window():
-    app = QtWidgets.QApplication.instance()
-    if app:
-        for widget in app.topLevelWidgets():
-            if widget.objectName() == "MayaWindow":
-                return widget
-    return None
-
-
-MAYA_MAIN_WINDOW = maya_main_window()
-# 全局变量来存储UI实例，防止被垃圾回收
-ui_instance = None
-
-
-def show_ui():
-    """显示UI界面的函数，确保只有一个实例存在。"""
-    global ui_instance
-    if ui_instance:
-        ui_instance.close()
-        ui_instance.deleteLater()
-    ui_instance = AnimCurveFilterUI(parent=MAYA_MAIN_WINDOW)
-    ui_instance.show()
-
-
-class AnimCurveFilterUI(QtWidgets.QDialog):
-    """
-    动画曲线过滤器UI类。
-    使用 PySide2 构建，并继承 MayaQWidgetDockableMixin 以便可以停靠在Maya界面中。
-    """
-
-    FILTER_MODES = {
-        "Butterworth": {
-            "tip": "在最大限度保持曲线细节的情况下, 对曲线进行一些光滑。",
-            "slider_range": (0, 100),
-            "default_value": 0,
-            "remap_range": (
-                1.0,
-                -2.0,
-            ),  # remap (input_min, input_max, output_min, output_max)
-        },
-        "Dampen": {
-            "tip": "在保持曲线连续性的情况下, 增加或减少曲线的振幅。",
-            "slider_range": (0, 100),
-            "default_value": 50,
-            "remap_range": (0.5, 1.5),
-        },
-        "Smooth": {
-            "tip": "对曲线进行大幅度的光滑处理, 会过滤掉很多动画细节。",
-            "slider_range": (1, 5),
-            "default_value": 1,
-            "remap_range": None,
-        },
-        "Simplify": {
-            "tip": "对动画曲线进行简化，减少关键帧。",
-            "slider_range": (0, 100),
-            "default_value": 0,
-            "remap_range": (0.0, 3.0),
-        },
-        "Twinner": {
-            "tip": "根据前后帧的值按照比例插值添加中间帧。",
-            "slider_range": (0, 100),
-            "default_value": 50,
-            "remap_range": (0.0, 1.0),
-        },
-    }
-
-    def __init__(self, parent=None):
-        super(AnimCurveFilterUI, self).__init__(parent)
-        self.setWindowTitle("动画曲线过滤器 (API 2.0)")
-        self.setObjectName("AnimCurveFilterRefactored")
-        self.setMinimumWidth(350)
-
-        # 核心逻辑处理器
-        self.filter_logic = AnimCurveFilterLogic()
-
-        # UI控件
-        self.filter_combo = None
-        self.value_slider = None
-        self.tip_label = None
-        self.reverse_button = None
-
-        self._create_widgets()
-        self._create_layouts()
-        self._create_connections()
-
-        # 初始化UI状态
-        self._on_filter_changed()
-
-    def _create_widgets(self):
-        """创建UI控件。"""
-        self.filter_combo = QtWidgets.QComboBox()
-        self.filter_combo.addItems(self.FILTER_MODES.keys())
-
-        self.value_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-
-        self.reverse_button = QtWidgets.QPushButton("恢复 (Reverse)")
-        self.reverse_button.setToolTip("将曲线恢复到本次修改前的状态")
-
-        self.tip_label = QtWidgets.QLabel()
-        self.tip_label.setWordWrap(True)
-        self.tip_label.setStyleSheet("color: #999;")
-
-    def _create_layouts(self):
-        """创建UI布局。"""
-        main_layout = QtWidgets.QVBoxLayout(self)
-
-        filter_layout = QtWidgets.QHBoxLayout()
-        filter_layout.addWidget(QtWidgets.QLabel("过滤器:"))
-        filter_layout.addWidget(self.filter_combo)
-
-        slider_layout = QtWidgets.QHBoxLayout()
-        slider_layout.addWidget(QtWidgets.QLabel("强度:"))
-        slider_layout.addWidget(self.value_slider)
-
-        main_layout.addLayout(filter_layout)
-        main_layout.addLayout(slider_layout)
-        main_layout.addWidget(self.tip_label)
-        main_layout.addWidget(self.reverse_button)
-        main_layout.addStretch()
-
-    def _create_connections(self):
-        """连接信号与槽。"""
-        self.filter_combo.currentTextChanged.connect(self._on_filter_changed)
-        self.value_slider.sliderPressed.connect(self.filter_logic.cache_current_curves)
-        self.value_slider.valueChanged.connect(self._on_slider_value_changed)
-        self.reverse_button.clicked.connect(self.filter_logic.restore_cached_curves)
-
-    def _on_filter_changed(self):
-        """当ComboBox选项改变时，更新UI和滑条。"""
-        current_filter = self.filter_combo.currentText()
-        settings = self.FILTER_MODES[current_filter]
-
-        self.tip_label.setText(settings["tip"])
-
-        # 阻止信号触发，以避免在设置值时执行过滤逻辑
-        self.value_slider.blockSignals(True)
-        self.value_slider.setRange(
-            settings["slider_range"][0], settings["slider_range"][1]
-        )
-        self.value_slider.setValue(settings["default_value"])
-        self.value_slider.blockSignals(False)
-
-    def _on_slider_value_changed(self, value):
-        """当滑条值改变时，执行对应的过滤器逻辑。"""
-        current_filter = self.filter_combo.currentText()
-        settings = self.FILTER_MODES[current_filter]
-
-        # 如果需要remap，则计算remap后的值，否则直接使用滑条值
-        if settings["remap_range"]:
-            i_min, i_max = self.value_slider.minimum(), self.value_slider.maximum()
-            o_min, o_max = settings["remap_range"]
-            processed_value = self.filter_logic.remap(i_min, i_max, o_min, o_max, value)
-        else:
-            processed_value = value
-
-        # 根据选择的过滤器调用对应的逻辑函数
-        filter_function_name = f"apply_{current_filter.lower()}_filter"
-        filter_function = getattr(self.filter_logic, filter_function_name, None)
-
-        if filter_function:
-            # 将操作包装在 undo chunk 中，以便可以撤销
-            cmds.undoInfo(openChunk=True)
-            try:
-                filter_function(processed_value)
-            finally:
-                cmds.undoInfo(closeChunk=True)
-
-
+oma.
 class AnimCurveFilterLogic:
     """
     动画曲线过滤器核心逻辑类。
@@ -215,24 +35,22 @@ class AnimCurveFilterLogic:
         获取当前在Graph Editor中选择的关键帧所在的动画曲线。
         返回一个字典，键为动画曲线节点名，值为 MFnAnimCurve 实例。
         """
-        selection = om.MGlobal.getActiveSelectionList()
         curves = {}
+        selection = om.MGlobal.getActiveSelectionList()
         if selection.isEmpty():
             return curves
-
-        for i in range(selection.length()):
-            try:
-                dep_node = selection.getDependNode(i)
-                if dep_node.apiType() in [
-                    om.MFn.kAnimCurveTimeToAngular,
-                    om.MFn.kAnimCurveTimeToDistance,
+        sel_iter = om.MItSelectionList(selection, om.MFn.kAnimCurve)
+        
+        while not sel_iter.isDone():
+            depend_node = sel_iter.getDependNode()
+            if depend_node.apiType in [
+                    om.MFn.kAnimCurveTimeToAngular,# 旋转
+                    om.MFn.kAnimCurveTimeToDistance,# 位移
                     om.MFn.kAnimCurveTimeToTime,
-                    om.MFn.kAnimCurveTimeToUnitless,
+                    om.MFn.kAnimCurveTimeToUnitless,# 旋转
                 ]:
-                    anim_curve_fn = oma.MFnAnimCurve(dep_node)
-                    curves[anim_curve_fn.name()] = anim_curve_fn
-            except Exception:
-                continue
+                anim_curve_fn = oma.MFnAnimCurve(depend_node)
+                curves[anim_curve_fn.name()] = anim_curve_fn
         return curves
 
     def cache_current_curves(self):

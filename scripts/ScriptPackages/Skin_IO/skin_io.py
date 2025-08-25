@@ -1,10 +1,8 @@
-import pathlib
 import pickle
 import json
 import traceback
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaAnim as oma
-import maya.api.OpenMayaUI as omui
 import pymel.core as pm
 import pymel.core.nodetypes as nt
 from Qt import QtWidgets
