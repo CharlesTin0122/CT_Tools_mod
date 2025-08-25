@@ -25,12 +25,11 @@
 import sys
 from functools import partial
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from Qt import QtWidgets, QtCore, QtGui
 
 import maya.cmds as cmds
 from maya.api import OpenMaya as om
 from maya.api import OpenMayaAnim as oma
-from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 
 
 def maya_main_window():
@@ -57,7 +56,7 @@ def show_ui():
     ui_instance.show()
 
 
-class AnimCurveFilterUI(MayaQWidgetDockableMixin, QtWidgets.QDialog):
+class AnimCurveFilterUI(QtWidgets.QDialog):
     """
     动画曲线过滤器UI类。
     使用 PySide2 构建，并继承 MayaQWidgetDockableMixin 以便可以停靠在Maya界面中。
