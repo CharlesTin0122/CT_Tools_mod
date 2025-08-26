@@ -11,7 +11,7 @@ FILTER_MODES = {
         "slider_range": (0, 100),
         "default_value": 50,
         "single_step": 1,
-        "remap_range": (-0.1, 0.1),
+        "remap_range": (0.1, -0.1),
     },
     "Smooth": {
         "tip": "对曲线进行大幅度的光滑处理, 会过滤掉很多动画细节。",
