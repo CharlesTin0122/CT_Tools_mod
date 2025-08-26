@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
-"""
-@FileName      : anim_curve_filter_refactored.py
-@DateTime      : 2025/08/21
-@Author        : 编码助手 (Gemini)
-@Contact       :
-@Software      : Maya 2023+
-@PythonVersion : python 3.9+
-@Libraries     : PySide2, Maya Python API 2.0
+# -*- encoding: utf-8 -*-
 
-重构说明:
-    1. UI界面使用 PySide2 重写，提供了更好的用户体验和扩展性。
-    2. 核心动画曲线操作逻辑使用 Maya Python API 2.0 重写，显著提升了处理大量关键帧时的性能和流畅度。
-    3. 保留了原始脚本的所有核心功能，并优化了交互逻辑。
-    4. 增加了撤销(Undo)功能，每次拖动滑条的操作都可以被撤销。
-    5. 使用了更清晰的结构和详细的注释，便于理解和维护。
+"""
+@File    :   anim_curve_filter_logic.py
+@Time    :   2025/08/25 17:49:07
+@Author  :   Charles Tian
+@Version :   2.0.0
+@Contact :   tianchao0533@gmail.com
+@Desc    :   动画曲线过滤器
 
 使用方法：
     1. 将此文件放入 Maya 脚本路径下，例如："\\Documents\\maya\\20xx\\scripts"
