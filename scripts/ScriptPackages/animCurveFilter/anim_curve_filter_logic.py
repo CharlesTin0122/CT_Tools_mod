@@ -77,7 +77,6 @@ class AnimCurveFilterLogic:
         anim_curves = self.get_selected_anim_curves()
         for name, curve_fn in anim_curves.items():
             keys_data = []
-
             for i in range(curve_fn.numKeys):
                 time = curve_fn.input(i)
                 value = curve_fn.value(i)
