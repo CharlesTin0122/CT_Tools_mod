@@ -217,8 +217,8 @@ class AnimCurveFilterLogic:
                 next_value = curve_fn.value(next_index)
                 # 如果前后帧的值不想等
                 if abs(next_value - pre_value) > 1e-6:
-                    # 算法：后值 - 前值 * 比例 + 前值
-                    new_value = (next_value - pre_value) * scale_value + pre_value
+                    # 算法：前值 + 后值 - 前值 * 比例
+                    new_value = pre_value + (next_value - pre_value) * scale_value
 
                     # 检查当前时间是否已有关键帧，有则修改，无则添加
                     found_exact = False

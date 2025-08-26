@@ -11,7 +11,7 @@ FILTER_MODES = {
         "slider_range": (0, 100),
         "default_value": 50,
         "single_step": 1,
-        "remap_range": (0, 1),
+        "remap_range": (-0.1, 0.1),
     },
     "Smooth": {
         "tip": "对曲线进行大幅度的光滑处理, 会过滤掉很多动画细节。",
@@ -22,9 +22,9 @@ FILTER_MODES = {
     },
     "Twinner": {
         "tip": "根据前后帧的值按照比例插值添加中间帧。",
-        "slider_range": (-10, 10),
+        "slider_range": (0, 100),
         "default_value": 0,
         "single_step": 1,
-        "remap_range": (0.0, 1.0),
+        "remap_range": (0, 1),
     },
 }

@@ -115,7 +115,7 @@ class AnimCurveFilterUI(QtWidgets.QDialog):
 
         self.value_slider.sliderPressed.connect(self.filter_logic.cache_current_curves)
         self.value_slider.valueChanged.connect(self._on_slider_value_changed)
-        self.value_slider.sliderReleased.connect(self.filter_logic.cache_current_curves)
+        self.value_slider.sliderReleased.connect(self.reset_slider)
 
         self.reverse_button.clicked.connect(self.filter_logic.restore_cached_curves)
         self.reverse_button.clicked.connect(self.reset_slider)
@@ -146,6 +146,7 @@ class AnimCurveFilterUI(QtWidgets.QDialog):
         settings = FILTER_MODES[current_filter]
         # 更新滑条数值标签显示
         self.value_label.setText(f"当前值： {value}")
+
         # 如果需要remap，则计算remap后的值，否则直接使用滑条值
         if settings["remap_range"]:
             i_min, i_max = self.value_slider.minimum(), self.value_slider.maximum()
