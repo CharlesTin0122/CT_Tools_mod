@@ -73,14 +73,27 @@ class AnimCurveFilterLogic:
         """
         在修改前，缓存所选动画曲线的所有关键帧数据。
         """
+        # 清理数据
         self.buffer_data.clear()
+        # 获取当前选择的动画曲线{name:MFnAnimCurve}
         anim_curves = self.get_selected_anim_curves()
+        # 遍历选中的动画曲线
         for name, curve_fn in anim_curves.items():
-            keys_data = []
+            keys_data = []  # 用于储存帧数据
+            # 选中的关键帧索引通过pymel获取当前动画曲线所选择的帧列表
+            attr = pm.PyNode(curve_fn.name())
+            sel_frame_list = pm.keyframe(attr, sl=True, query=True)
+            # 将帧列表转化为MTime列表
+            sel_time_list = [om.MTime(frame) for frame in sel_frame_list]
+            # 遍历曲线所有帧索引
             for i in range(curve_fn.numKeys):
+                # 获取当前帧时间
                 time = curve_fn.input(i)
-                value = curve_fn.value(i)
-                keys_data.append((time, value))
+                # 如果当前帧时间是选中的关键帧,添加数据
+                if time in sel_time_list:
+                    value = curve_fn.value(i)
+                    keys_data.append((time, value))
+            # 填充最终数据
             self.buffer_data[name] = {"curve_fn": curve_fn, "keys": keys_data}
         print(f"已缓存 {len(self.buffer_data)} 条曲线数据。")
 
