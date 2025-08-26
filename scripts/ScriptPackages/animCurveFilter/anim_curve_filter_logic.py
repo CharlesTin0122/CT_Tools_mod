@@ -8,11 +8,6 @@
 @Contact :   tianchao0533@gmail.com
 @Desc    :   当前文件作用
 
-使用方法：
-    1. 将此文件放入 Maya 脚本路径下，例如："\\Documents\\maya\\20xx\\scripts"
-    2. 在 Maya 的脚本编辑器中执行以下 Python 代码:
-       import anim_curve_filter_refactored
-       anim_curve_filter_refactored.show_ui()
 """
 
 from maya.api import OpenMaya as om
@@ -50,31 +45,26 @@ class AnimCurveFilterLogic:
         sel_iter = om.MItSelectionList(selection)
         # 遍历选择列表
         while not sel_iter.isDone():
-            try:
-                # 获取MObject
-                depend_node = sel_iter.getDependNode()
-                # 确保节点是有效的 MObject
-                if not depend_node.isNull() and depend_node.hasFn(om.MFn.kAnimCurve):
-                    # 检查是否是支持的动画曲线类型
-                    if depend_node.apiType() in [
-                        om.MFn.kAnimCurveTimeToAngular,  # 旋转
-                        om.MFn.kAnimCurveTimeToDistance,  # 位移
-                        om.MFn.kAnimCurveTimeToTime,  # 时间扭曲
-                        om.MFn.kAnimCurveTimeToUnitless,  # 旋转
-                    ]:
-                        # 获取动画曲线函数集
-                        anim_curve_fn = oma.MFnAnimCurve(depend_node)
-                        # 获取动画曲线名称
-                        curve_name = anim_curve_fn.name()
-                        # 填充数据
-                        curves[curve_name] = anim_curve_fn
-                        print(f"Found animation curve: {curve_name}")
-                else:
-                    print(
-                        f"Skipping invalid or unsupported node: {depend_node.apiTypeStr()}"
-                    )
-            except Exception as e:
-                print(f"Error processing node: {e}")
+            # 获取MObject
+            depend_node = sel_iter.getDependNode()
+            # 确保节点是有效的 MObject
+            if not depend_node.isNull() and depend_node.hasFn(om.MFn.kAnimCurve):
+                # 检查是否是支持的动画曲线类型
+                if depend_node.apiType() in [
+                    om.MFn.kAnimCurveTimeToAngular,  # 旋转
+                    om.MFn.kAnimCurveTimeToDistance,  # 位移
+                    om.MFn.kAnimCurveTimeToTime,  # 时间扭曲
+                    om.MFn.kAnimCurveTimeToUnitless,  # 旋转
+                ]:
+                    # 获取动画曲线函数集
+                    anim_curve_fn = oma.MFnAnimCurve(depend_node)
+                    # 获取动画曲线名称
+                    curve_name = anim_curve_fn.name()
+                    # 填充数据
+                    curves[curve_name] = anim_curve_fn
+                    print(f"Found animation curve: {curve_name}")
+            else:
+                print(f"Skipping invalid or unsupported node: {depend_node.apiTypeStr}")
             sel_iter.next()  # 推进迭代器，防止无限循环
 
         return curves
@@ -109,7 +99,9 @@ class AnimCurveFilterLogic:
     def apply_butterworth_filter(self, scale_value):
         """
         应用Butterworth过滤器。
-        原理：对每相邻的三帧，求其平均值，以此为轴心对中间帧进行缩放。
+        原理：对每相邻的三帧，求其平均值，以此为轴心对中间帧进行值缩放。
+        Args:
+            scale_value (float): 缩放值,0:1
         """
         # 关闭缓存曲线更新，以便后面返回原始曲线数据。
         pm.bufferCurve(animation="keysOrObjects", overwrite=False)
@@ -119,6 +111,7 @@ class AnimCurveFilterLogic:
             curve_fn = data["curve_fn"]
             num_keys = curve_fn.numKeys
             if num_keys < 3:
+                print((f"Skipping curve {curve_fn.name()} with fewer than 3 keys."))
                 continue
             # 获取帧的值列表
             original_values = [curve_fn.value(i) for i in range(num_keys)]
@@ -139,31 +132,37 @@ class AnimCurveFilterLogic:
         应用Dampen过滤器。
         原理：将首尾两帧连线，找出曲线上每一帧投射到连线上的值，以此为轴心进行缩放。
         """
+        # 关闭缓存曲线更新，以便后面返回原始曲线数据。
+        pm.bufferCurve(animation="keysOrObjects", overwrite=False)
+        # 遍历数据
         for data in self.buffer_data.values():
             curve_fn = data["curve_fn"]
             num_keys = curve_fn.numKeys
             if num_keys < 2:
                 continue
-
-            start_time = curve_fn.time(0)
+            # 计算动画曲线的整体斜率（第一个关键帧到最后一个关键帧的平均变化率）：
+            # 曲线首末帧的 值差/时间差
+            start_time = curve_fn.input(0).asUnits(om.MTime.uiUnit())
             start_value = curve_fn.value(0)
-            end_time = curve_fn.time(num_keys - 1)
+            end_time = curve_fn.input(num_keys - 1).asUnits(om.MTime.uiUnit())
             end_value = curve_fn.value(num_keys - 1)
 
-            time_diff = end_time.value - start_time.value
-            if abs(time_diff) < 1e-6:  # 避免除以零
+            time_diff = end_time - start_time
+            value_diff = end_value - start_value
+            # 避免除以零,1e-6 = 1 * 10 ^{-6} = 0.000001
+            if abs(time_diff) < 1e-6:
                 continue
 
-            tangent = (end_value - start_value) / time_diff
-
+            tangent = value_diff / time_diff
+            # 遍历所有关键帧进行插值
             for i in range(1, num_keys - 1):
-                current_time = curve_fn.time(i)
+                current_time = curve_fn.input(i).asUnits(om.MTime.uiUnit())
                 current_value = curve_fn.value(i)
-
-                pivot_value = start_value + tangent * (
-                    current_time.value - start_time.value
-                )
-                new_value = pivot_value + (current_value - pivot_value) * scale_value
+                # 计算缩放的枢轴点：当前时间到第一帧时间的斜率插值
+                pivot_value = start_value + tangent * (current_time - start_time)
+                # 计算新值：当前值到枢轴值的缩放插值
+                new_value = current_value + (pivot_value - current_value) * scale_value
+                # 设置曲线值
                 curve_fn.setValue(i, new_value)
 
     def apply_smooth_filter(self, iterations):
@@ -171,15 +170,18 @@ class AnimCurveFilterLogic:
         应用Smooth过滤器。
         原理：对每相邻的三帧，求其平均值，直接赋给中间帧。可多次迭代。
         """
+        # 关闭缓存曲线更新，以便后面返回原始曲线数据。
+        pm.bufferCurve(animation="keysOrObjects", overwrite=False)
+        # 遍历迭代次数
         for _ in range(iterations):
             for data in self.buffer_data.values():
                 curve_fn = data["curve_fn"]
                 num_keys = curve_fn.numKeys
                 if num_keys < 3:
                     continue
-
+                # 获取帧数据
                 original_values = [curve_fn.value(i) for i in range(num_keys)]
-
+                # 计算临近三帧的平均值直接赋值给中间帧
                 for i in range(1, num_keys - 1):
                     pre_value = original_values[i - 1]
                     cur_value = original_values[i]
@@ -187,96 +189,71 @@ class AnimCurveFilterLogic:
                     average_value = (pre_value + cur_value + nex_value) / 3.0
                     curve_fn.setValue(i, average_value)
 
-    def apply_simplify_filter(self, tolerance_value):
-        """
-        应用Simplify过滤器。
-        使用 MFnAnimCurve.simplify() API 调用。
-        """
-        for data in self.buffer_data.values():
-            curve_fn = data["curve_fn"]
-            if curve_fn.numKeys > 2:
-                time_tolerance = om.MTime(tolerance_value, om.MTime.uiUnit())
-                value_tolerance = tolerance_value
-                curve_fn.simplify(time_tolerance, value_tolerance)
-
     def apply_twinner_filter(self, scale_value):
         """
         应用Twinner过滤器。
         在当前时间点，根据前后帧的值按比例创建或修改关键帧。
         """
+        # 关闭缓存曲线更新，以便后面返回原始曲线数据。
+        pm.bufferCurve(animation="keysOrObjects", overwrite=False)
+        # 获取当前时间栏时间
         current_time = oma.MAnimControl.currentTime()
-        selection = om.MGlobal.getRichSelection()
-        mfn_selection = oma.MSelectionList()
+        # 遍历数据
+        for data in self.buffer_data.values():
+            curve_fn = data["curve_fn"]
+            num_keys = curve_fn.numKeys
+            if num_keys < 2:
+                continue
 
-        # 查找所有动画层上的动画曲线
-        anim_layers = pm.ls(type="animLayer")
-        for layer in anim_layers:
-            plugs = pm.animLayer(layer, query=True, attribute=True)
-            if plugs:
-                for plug_str in plugs:
-                    try:
-                        sel_list = om.MSelectionList()
-                        sel_list.add(plug_str)
-                        plug = sel_list.getPlug(0)
+            # 查找当前时间前一个和后一个关键帧的索引
+            pre_index = curve_fn.findClosest(current_time)
+            if curve_fn.input(pre_index) > current_time and pre_index > 0:
+                pre_index -= 1
 
-                        source = plug.source()
-                        if not source.isNull:
-                            source_node = source.node()
-                            if source_node.hasFn(om.MFn.kAnimCurve):
-                                curve_fn = oma.MFnAnimCurve(source_node)
-                                self._tween_curve(curve_fn, current_time, scale_value)
+            next_index = pre_index + 1
+            # 获取前后关键帧的值
+            if pre_index >= 0 and next_index < curve_fn.numKeys:
+                pre_value = curve_fn.value(pre_index)
+                next_value = curve_fn.value(next_index)
+                # 如果前后帧的值不想等
+                if abs(next_value - pre_value) > 1e-6:
+                    # 算法：后值 - 前值 * 比例 + 前值
+                    new_value = (next_value - pre_value) * scale_value + pre_value
 
-                    except Exception as e:
-                        # print(f"Could not process plug {plug_str}: {e}")
-                        pass
+                    # 检查当前时间是否已有关键帧，有则修改，无则添加
+                    found_exact = False
+                    for i in range(curve_fn.numKeys):
+                        if curve_fn.input(i) == current_time:
+                            curve_fn.setValue(i, new_value)
+                            found_exact = True
+                            break
 
-    def _tween_curve(self, curve_fn, current_time, scale_value):
-        """Twinner过滤器的辅助函数，处理单条曲线。"""
-
-        # 查找前一个和后一个关键帧的索引
-        pre_index = curve_fn.findClosest(current_time)
-        if curve_fn.time(pre_index) > current_time and pre_index > 0:
-            pre_index -= 1
-
-        next_index = pre_index + 1
-
-        if pre_index >= 0 and next_index < curve_fn.numKeys:
-            pre_value = curve_fn.value(pre_index)
-            next_value = curve_fn.value(next_index)
-
-            if abs(next_value - pre_value) > 1e-6:
-                # 算法：后值 - 前值 * 比例 + 前值
-                new_value = (next_value - pre_value) * scale_value + pre_value
-
-                # 检查当前时间是否已有关键帧，有则修改，无则添加
-                found_exact = False
-                for i in range(curve_fn.numKeys):
-                    if curve_fn.time(i) == current_time:
-                        curve_fn.setValue(i, new_value)
-                        found_exact = True
-                        break
-
-                if not found_exact:
-                    curve_fn.addKey(current_time, new_value)
+                    if not found_exact:
+                        key_index = curve_fn.insertKey(current_time)
+                        curve_fn.setValue(key_index, new_value)
 
     @staticmethod
-    def remap(i_min, i_max, o_min, o_max, v):
+    def remap_value(in_min, in_max, out_min, out_max, v) -> float:
         """
-        将一个线性比例尺上的值重新映射到另一个线性比例尺上。
+        将一个线性比例尺上的值重新映射到另一个线性比例尺上，结合了线性插值和反线性插值。
+        Args:
+            i_min (float): 输入比例尺的最小值。
+            i_max (float): 输入比例尺的最大值。
+            o_min (float): 输出比例尺的最小值。
+            o_max (float): 输出比例尺的最大值。
+            v (float): 需要重新映射的值。
+        Returns:
+            float: 重新映射后的值。
+        Examples:
+            45 == remap(0, 100, 40, 50, 50)
+            6.2 == remap(1, 5, 3, 7, 4.2)
         """
-        if i_max - i_min == 0:
-            return o_min
-        return o_min + (o_max - o_min) * ((v - i_min) / (i_max - i_min))
-
-
-# --- 主程序入口 ---
-if __name__ == "__main__":
-    # 在Maya中，最好通过一个独立的函数来调用UI，以避免多重实例问题
-    try:
-        if ui_instance:
-            ui_instance.close()
-            ui_instance.deleteLater()
-    except:
-        pass
-
-    show_ui()
+        # 排除除零错误
+        if in_max - in_min == 0:
+            return out_min
+        # 获得 v 在 in_min, in_max 之间的比例，0：1
+        t = (v - in_min) / (in_max - in_min)
+        # 获取out_min, out_max 对于 t 的插值
+        val = out_min + (out_max - out_min) * t
+        # 返回结果
+        return val
