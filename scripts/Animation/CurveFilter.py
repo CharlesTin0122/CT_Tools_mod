@@ -5,8 +5,6 @@
 # @Time     :  2023/5/26 10:50
 # @Software : PyCharm
 # Description:
-from importlib import reload
-import animCurveFilter.anim_curve_filter as Filter
-reload(Filter)
-curve_filter = Filter.AnimCurveFilter()
-curve_filter.create_ui()
+from animCurveFilter import anim_curve_filter_ui as ui
+
+ui.AnimCurveFilterUI.show_ui()
