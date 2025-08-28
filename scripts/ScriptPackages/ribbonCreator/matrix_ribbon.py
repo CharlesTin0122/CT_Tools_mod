@@ -301,7 +301,7 @@ class RibbonCreator(QtWidgets.QDialog):
                     ctrl = pm.circle(
                         name=ctrl_name,
                         constructionHistory=False,
-                        normal=(0, 1, 0),
+                        normal=self.ribbon_axis,
                         radius=8,
                     )[0]
                     ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
