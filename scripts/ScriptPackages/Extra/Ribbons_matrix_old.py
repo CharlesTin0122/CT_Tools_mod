@@ -13,16 +13,15 @@ as close to the object as possible. Otherwise, you can specify U and V coordinat
 
 def pin_to_surface(oNurbs, sourceObj=None, uPos=0.5, vPos=0.5):
     """
-    This function replaces what I used to use follicles for.
-    It pins an object to a surface's UV coordinates.
-    In rare circumstances follicles can flip and jitter. This seems to solve that.
+        这个功能替代了我以前用毛囊的用途。
+        它将一个物体固定在表面的 UV 坐标上。
+        在少数情况下，毛囊可能会翻转和抖动。这似乎解决了这个问题
 
-    1. oNurbs is the surface you want to pin to.
-    Pass a PyNode transform, NurbsSurface or valid string name.
-    2. sourceObj is an optional reference transform. If specified the UV coordinates
-    will be placed as close as possible. Otherwise, specify U and V coordinates.
-    Pass a PyNode transform, shape node or valid string name.
-    3. uPos and vPos can be specified, and default to 0.5
+        1. oNurbs 是你想要固定的表面。
+        传递一个 PyNode 变换、NurbsSurface 或有效的字符串名称。
+        2. sourceObj是一个可选的参考变换。如果指定,UV坐标将尽可能放置。否则,指定U和V坐标。
+    传递一个PyNode变换、形状节点或有效的字符串名称。
+        3. uPos和vPos可以指定,默认为0.5。
     """
 
     # TODO: Can I support polygons?
