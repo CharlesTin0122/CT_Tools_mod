@@ -25,6 +25,7 @@ class RibbonCreator(QtWidgets.QDialog):
         self.setMinimumSize(100, 200)
 
         self.ribbon_name = "Ribbon"
+        self.create_ctrl = True
         self.ribbon_axis = (0, -1, 0)
         self.ribbon_width = 5
         self.ribbon_length = 20
@@ -33,8 +34,6 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ribbon_ctrl_num = 3
 
         self.nurbs_plane = None
-        self.ctrl_list = []
-        self.pin_list = []
 
         self.create_widgets()
         self.create_layouts()
@@ -147,13 +146,18 @@ class RibbonCreator(QtWidgets.QDialog):
     def on_button_clicked(self):
         try:
             self.nurbs_plane = self.create_nurbs_plane(
+                self.ribbon_name,
                 self.ribbon_axis,
                 self.ribbon_width,
                 self.ribbon_length,
                 self.ribbon_segment_count,
             )
-            self.ctrl_list, self.pin_list = self.create_ribbon(
-                self.nurbs_plane, self.ribbon_pin_num, self.ribbon_ctrl_num
+            self.create_ribbon(
+                self.nurbs_plane,
+                self.ribbon_name,
+                self.ribbon_pin_num,
+                self.ribbon_ctrl_num,
+                self.create_ctrl,
             )
         except Exception as e:
             traceback.print_exc()
@@ -179,7 +183,7 @@ class RibbonCreator(QtWidgets.QDialog):
             cls._ui_instance.activateWindow()
 
     def create_nurbs_plane(
-        self, axis, width, length, segment_count
+        self, ribbon_name, axis, width, length, segment_count
     ) -> pm.nodetypes.Transform:
         """创建NURBS平面，用于制作Ribbon
 
@@ -195,6 +199,7 @@ class RibbonCreator(QtWidgets.QDialog):
         """
         length_ratio = length / width
         nurbs_plane = pm.nurbsPlane(
+            name=f"{ribbon_name}_plane",
             pivot=(0, 0, 0),
             axis=axis,
             width=width,
@@ -206,7 +211,9 @@ class RibbonCreator(QtWidgets.QDialog):
         )[0]
         return nurbs_plane
 
-    def create_ribbon(self, nurbs_plane, pin_num, ctrl_num):
+    def create_ribbon(
+        self, nurbs_plane, ribbon_name, pin_num, ctrl_num, create_ctrl=False
+    ):
         """使用矩阵节点实现Ribbon，主要用到"uvPin"和"pointOnSurfaceInfo"节点
 
         Args:
@@ -231,15 +238,14 @@ class RibbonCreator(QtWidgets.QDialog):
         if not isinstance(ctrl_num, int) or ctrl_num <= 0:
             raise ValueError("ctrl_num must be a positive integer.")
 
-        nurbs_name = nurbs_plane.name()
         nurbs_shape = nurbs_plane.getShape()
         paramLengthV = nurbs_shape.minMaxRangeV.get()  # 一般为0:1
 
         pin_jnt_list = []
         for i in range(pin_num):
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1)) * paramLengthV[1]
-            uvPin_node = pm.createNode("uvPin", name=f"uvPin_{i}")
-            pin_jnt = pm.joint(name=f"{nurbs_name}_pin_{i}", radius=1)
+            uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
+            pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
 
             uvPin_node.coordinate[0].coordinateU.set(0.5)
             uvPin_node.coordinate[0].coordinateV.set(v_pose)
@@ -249,24 +255,55 @@ class RibbonCreator(QtWidgets.QDialog):
             pin_jnt_list.append(pin_jnt)
 
         ctrl_jnt_list = []
+        ctrl_grp_list = []
         for i in range(ctrl_num):
             v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1)) * paramLengthV[1]
-            posi_node = pm.createNode("pointOnSurfaceInfo", name=f"posi_{i}")
-            ctrl_jnt = pm.joint(name=f"{nurbs_name}_ctrlJnt_{i}", radius=5)
+            posi_node = pm.createNode(
+                "pointOnSurfaceInfo", name=f"{ribbon_name}_posi_{i}"
+            )
+            ctrl_jnt = pm.joint(name=f"{ribbon_name}_ctrlJnt_{i}", radius=5)
             posi_node.parameterU.set(0.5)
             posi_node.parameterV.set(v_pose)
             nurbs_shape.worldSpace[0].connect(posi_node.inputSurface)
             position = posi_node.result.position.get()
             if position:
                 ctrl_jnt.setTranslation(position)
-                pm.delete(posi_node)
+                if create_ctrl:
+                    ctrl_name = f"{ribbon_name}_ctrl_{i}"
+                    ctrl = pm.circle(
+                        name=ctrl_name,
+                        constructionHistory=False,
+                        normal=(0, 0, 1),
+                        radius=8,
+                    )[0]
+                    ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
+                    pm.matchTransform(ctrl_offset_grp, ctrl_jnt)
+                    pm.parentConstraint(ctrl, ctrl_jnt)
+                    ctrl_grp_list.append(ctrl_offset_grp)
             ctrl_jnt_list.append(ctrl_jnt)
+            pm.delete(posi_node)
+
         pm.skinCluster(nurbs_plane, ctrl_jnt_list)
 
-        pin_jnt_grp = pm.group(pin_jnt_list, name=f"{nurbs_name}_pin_Jnt_grp")
-        ctrl_jnt_grp = pm.group(ctrl_jnt_list, name=f"{nurbs_name}_ctrl_Jnt_grp")
+        pin_jnt_grp = pm.group(pin_jnt_list, name=f"{ribbon_name}_pin_Jnt_grp")
+        ctrl_jnt_grp = pm.group(ctrl_jnt_list, name=f"{ribbon_name}_ctrl_Jnt_grp")
 
-        return ctrl_jnt_list, pin_jnt_list
+        if create_ctrl:
+            ctrl_grp = pm.group(ctrl_grp_list, name=f"{ribbon_name}_ctrl_grp")
+            pm.group(
+                nurbs_plane,
+                pin_jnt_grp,
+                ctrl_jnt_grp,
+                ctrl_grp,
+                name=f"{ribbon_name}_grp",
+            )
+        else:
+            pm.group(
+                nurbs_plane,
+                pin_jnt_grp,
+                ctrl_jnt_grp,
+                name=f"{ribbon_name}_grp",
+            )
 
 
 if __name__ == "__main__":
