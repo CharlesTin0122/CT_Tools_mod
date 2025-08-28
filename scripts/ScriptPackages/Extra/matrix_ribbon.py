@@ -10,7 +10,7 @@
 
 import traceback
 import pymel.core as pm
-from Qt import QtCore, QtWidgets, QtGui
+from Qt import QtCore, QtWidgets
 
 
 class RibbonCreator(QtWidgets.QDialog):
@@ -22,10 +22,10 @@ class RibbonCreator(QtWidgets.QDialog):
         super().__init__(parent)
 
         self.setWindowTitle("Ribbon Creator")
-        self.setMinimumSize(100, 200)
+        self.setMinimumSize(300, 200)
 
         self.ribbon_name = "Ribbon"
-        self.create_ctrl = True
+        self.create_ctrl = False
         self.ribbon_axis = (0, -1, 0)
         self.ribbon_width = 5
         self.ribbon_length = 20
@@ -40,6 +40,10 @@ class RibbonCreator(QtWidgets.QDialog):
         self.create_connections()
 
     def create_widgets(self):
+        self.name_line = QtWidgets.QLineEdit()
+        self.name_line.setText("Ribbon")
+        self.name_line.setFixedWidth(80)
+
         self.orient_comb = QtWidgets.QComboBox()
         self.orient_comb.addItem("x", (1, 0, 0))
         self.orient_comb.addItem("y", (0, 1, 0))
@@ -66,6 +70,8 @@ class RibbonCreator(QtWidgets.QDialog):
         self.segment_spin.setMaximum(10000)
         self.segment_spin.setValue(5)
 
+        self.ctrl_cb = QtWidgets.QCheckBox("Add Ctrl")
+
         self.pin_label = QtWidgets.QLabel("pin_num: ")
 
         self.pin_spin = QtWidgets.QSpinBox()
@@ -85,11 +91,27 @@ class RibbonCreator(QtWidgets.QDialog):
         self.button = QtWidgets.QPushButton("Create Ribbon")
 
     def create_layouts(self):
-        nurbs_layout = QtWidgets.QFormLayout()
-        nurbs_layout.addRow("orient: ", self.orient_comb)
-        nurbs_layout.addRow("width: ", self.width_double_spin)
-        nurbs_layout.addRow("length: ", self.length_double_spin)
-        nurbs_layout.addRow("segment: ", self.segment_spin)
+        nurbs_layout = QtWidgets.QGridLayout()
+        nurbs_layout.setSpacing(5)
+        nurbs_layout.setColumnStretch(0, 0)  # 左 label列，不伸缩
+        nurbs_layout.setColumnStretch(1, 0)  # 左输入列，不伸缩
+        nurbs_layout.setColumnStretch(2, 1)  # 中间空隙，伸缩
+        nurbs_layout.setColumnStretch(3, 0)  # 右 label列，不伸缩
+        nurbs_layout.setColumnStretch(4, 0)  # 右输入列，不伸缩
+
+        nurbs_layout.addWidget(QtWidgets.QLabel("name: "), 0, 0)
+        nurbs_layout.addWidget(self.name_line, 0, 1)
+        nurbs_layout.addWidget(QtWidgets.QLabel("orient: "), 0, 3)
+        nurbs_layout.addWidget(self.orient_comb, 0, 4)
+
+        nurbs_layout.addWidget(QtWidgets.QLabel("width: "), 1, 0)
+        nurbs_layout.addWidget(self.width_double_spin, 1, 1)
+        nurbs_layout.addWidget(QtWidgets.QLabel("length: "), 1, 3)
+        nurbs_layout.addWidget(self.length_double_spin, 1, 4)
+
+        nurbs_layout.addWidget(QtWidgets.QLabel("segment: "), 2, 0)
+        nurbs_layout.addWidget(self.segment_spin, 2, 1)
+        nurbs_layout.addWidget(self.ctrl_cb, 2, 4)
 
         nurbs_grp = QtWidgets.QGroupBox("NURBS Arguments")
         nurbs_grp.setLayout(nurbs_layout)
@@ -116,6 +138,7 @@ class RibbonCreator(QtWidgets.QDialog):
         self.segment_spin.valueChanged.connect(self.on_segment_spin_changed)
         self.pin_spin.valueChanged.connect(self.on_pin_spin_changed)
         self.ctrl_spin.valueChanged.connect(self.on_ctrl_spin_changed)
+        self.ctrl_cb.toggled.connect(self.on_ctrl_cb_toggled)
         self.button.clicked.connect(self.on_button_clicked)
 
     @QtCore.Slot()
@@ -143,7 +166,12 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ribbon_ctrl_num = value
 
     @QtCore.Slot()
+    def on_ctrl_cb_toggled(self, check):
+        self.create_ctrl = check
+
+    @QtCore.Slot()
     def on_button_clicked(self):
+        self.ribbon_name = self.name_line.text()
         try:
             self.nurbs_plane = self.create_nurbs_plane(
                 self.ribbon_name,
