@@ -26,7 +26,7 @@ class RibbonCreator(QtWidgets.QDialog):
 
         self.ribbon_name = "Ribbon"
         self.create_ctrl = False
-        self.ribbon_axis = (0, -1, 0)
+        self.ribbon_axis = (1, 0, 0)
         self.ribbon_width = 5
         self.ribbon_length = 20
         self.ribbon_segment_count = 5
@@ -301,12 +301,13 @@ class RibbonCreator(QtWidgets.QDialog):
                     ctrl = pm.circle(
                         name=ctrl_name,
                         constructionHistory=False,
-                        normal=(0, 0, 1),
+                        normal=(0, 1, 0),
                         radius=8,
                     )[0]
                     ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
                     pm.matchTransform(ctrl_offset_grp, ctrl_jnt)
                     pm.parentConstraint(ctrl, ctrl_jnt)
+                    pm.scaleConstraint(ctrl, ctrl_jnt)
                     ctrl_grp_list.append(ctrl_offset_grp)
             ctrl_jnt_list.append(ctrl_jnt)
             pm.delete(posi_node)
