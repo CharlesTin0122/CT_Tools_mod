@@ -45,6 +45,7 @@ class RibbonCreator(QtWidgets.QDialog):
         self.name_line.setFixedWidth(80)
 
         self.orient_comb = QtWidgets.QComboBox()
+        # 添加项目，选项和数据
         self.orient_comb.addItem("x", (1, 0, 0))
         self.orient_comb.addItem("y", (0, 1, 0))
         self.orient_comb.addItem("z", (0, 0, 1))
@@ -93,6 +94,7 @@ class RibbonCreator(QtWidgets.QDialog):
     def create_layouts(self):
         nurbs_layout = QtWidgets.QGridLayout()
         nurbs_layout.setSpacing(5)
+        # 设置伸缩，参数1：列索引，参数2：缩放比例
         nurbs_layout.setColumnStretch(0, 0)  # 左 label列，不伸缩
         nurbs_layout.setColumnStretch(1, 0)  # 左输入列，不伸缩
         nurbs_layout.setColumnStretch(2, 1)  # 中间空隙，伸缩
@@ -112,7 +114,7 @@ class RibbonCreator(QtWidgets.QDialog):
         nurbs_layout.addWidget(QtWidgets.QLabel("segment: "), 2, 0)
         nurbs_layout.addWidget(self.segment_spin, 2, 1)
         nurbs_layout.addWidget(self.ctrl_cb, 2, 4)
-
+        # GroupBox包裹layout
         nurbs_grp = QtWidgets.QGroupBox("NURBS Arguments")
         nurbs_grp.setLayout(nurbs_layout)
 
@@ -122,7 +124,7 @@ class RibbonCreator(QtWidgets.QDialog):
         ribbon_layout.addStretch()
         ribbon_layout.addWidget(self.ctrl_label)
         ribbon_layout.addWidget(self.ctrl_spin)
-
+        # GroupBox包裹layout
         ribbon_grp = QtWidgets.QGroupBox("Ribbon Arguments")
         ribbon_grp.setLayout(ribbon_layout)
 
@@ -140,6 +142,8 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ctrl_spin.valueChanged.connect(self.on_ctrl_spin_changed)
         self.ctrl_cb.toggled.connect(self.on_ctrl_cb_toggled)
         self.button.clicked.connect(self.on_button_clicked)
+
+    """----------------------------槽函数------------------------------"""
 
     @QtCore.Slot()
     def on_orient_comb_changed(self, text):
@@ -191,6 +195,8 @@ class RibbonCreator(QtWidgets.QDialog):
             traceback.print_exc()
             pm.displayWarning(e)
 
+    """---------------------静态方法和类方法------------------------"""
+
     @staticmethod
     def get_maya_main_window():
         app = QtWidgets.QApplication.instance()
@@ -210,12 +216,14 @@ class RibbonCreator(QtWidgets.QDialog):
             cls._ui_instance.raise_()
             cls._ui_instance.activateWindow()
 
+    """----------------------------------逻辑核心-----------------------------"""
+
     def create_nurbs_plane(
         self, ribbon_name, axis, width, length, segment_count
     ) -> pm.nodetypes.Transform:
         """创建NURBS平面，用于制作Ribbon
-
         Args:
+            ribbon_name(str):ribbon名称
             axis (tuple): 平面朝向：(0,0,1)
             width (float): 宽度
             length (float):长度
@@ -223,9 +231,8 @@ class RibbonCreator(QtWidgets.QDialog):
 
         returns:
             nt.Transform
-
         """
-        length_ratio = length / width
+        length_ratio = length / width  # 长宽比
         nurbs_plane = pm.nurbsPlane(
             name=f"{ribbon_name}_plane",
             pivot=(0, 0, 0),
@@ -242,16 +249,21 @@ class RibbonCreator(QtWidgets.QDialog):
     def create_ribbon(
         self, nurbs_plane, ribbon_name, pin_num, ctrl_num, create_ctrl=False
     ):
-        """使用矩阵节点实现Ribbon，主要用到"uvPin"和"pointOnSurfaceInfo"节点
-
+        """使用矩阵节点实现Ribbon，
+        使用"uvPin"节点将pin骨骼附加的nurbs平面
+        使用"pointOnSurfaceInfo"节点获取控制骨骼和控制器位置
+        控制骨骼蒙皮到nurbs平面
+        控制器约束控制骨骼
         Args:
             nurbs_plane (pm.nodetypes.Transform): 要创建Ribbon的nurbsPlane
+            ribbon_name（str）：ribbon名称
             pin_num (int): pin骨骼数量
             ctrl_num (int): 控制骨骼数量
-
+            create_ctrl（bool）:是否创建控制器
         Returns:
             tuple[list, list]: 返回控制骨骼列表和pin骨骼列表
         """
+        # 检查变量
         if isinstance(nurbs_plane, str) and pm.objExists(nurbs_plane):
             nurbs_plane = pm.PyNode(nurbs_plane)
         elif isinstance(nurbs_plane, pm.nodetypes.Transform):
@@ -265,12 +277,13 @@ class RibbonCreator(QtWidgets.QDialog):
             raise ValueError("pin_num must be a positive integer.")
         if not isinstance(ctrl_num, int) or ctrl_num <= 0:
             raise ValueError("ctrl_num must be a positive integer.")
-
+        # 获取变量
         nurbs_shape = nurbs_plane.getShape()
         paramLengthV = nurbs_shape.minMaxRangeV.get()  # 一般为0:1
-
+        # 创建pin骨骼
         pin_jnt_list = []
         for i in range(pin_num):
+            # 根据pin_num计算位置比例，paramLength有时可能不是0:1，并且防止除0
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1)) * paramLengthV[1]
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
@@ -281,7 +294,7 @@ class RibbonCreator(QtWidgets.QDialog):
             nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
             uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
             pin_jnt_list.append(pin_jnt)
-
+        # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
         for i in range(ctrl_num):
@@ -294,6 +307,7 @@ class RibbonCreator(QtWidgets.QDialog):
             posi_node.parameterV.set(v_pose)
             nurbs_shape.worldSpace[0].connect(posi_node.inputSurface)
             position = posi_node.result.position.get()
+            # 如果控制骨骼位置存在，创建控制骨骼和控制器
             if position:
                 ctrl_jnt.setTranslation(position)
                 if create_ctrl:
@@ -305,15 +319,16 @@ class RibbonCreator(QtWidgets.QDialog):
                         radius=8,
                     )[0]
                     ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
+                    # 控制器对齐控制骨骼并约束
                     pm.matchTransform(ctrl_offset_grp, ctrl_jnt)
-                    pm.parentConstraint(ctrl, ctrl_jnt)
-                    pm.scaleConstraint(ctrl, ctrl_jnt)
+                    pm.parentConstraint(ctrl, ctrl_jnt, maintainOffset=True)
+                    pm.scaleConstraint(ctrl, ctrl_jnt, maintainOffset=True)
                     ctrl_grp_list.append(ctrl_offset_grp)
             ctrl_jnt_list.append(ctrl_jnt)
             pm.delete(posi_node)
-
+        # 控制骨骼蒙皮到nur平面
         pm.skinCluster(nurbs_plane, ctrl_jnt_list)
-
+        # 打组，整理场景
         pin_jnt_grp = pm.group(pin_jnt_list, name=f"{ribbon_name}_pin_Jnt_grp")
         ctrl_jnt_grp = pm.group(ctrl_jnt_list, name=f"{ribbon_name}_ctrl_Jnt_grp")
 
