@@ -68,7 +68,7 @@ class Mel2Pymel:
             self.mel_feild, q=1, t=1
         )  # 读取输入的mel语言字符串
         self.py_cmd = mel2py.mel2pyStr(
-            self.mel_cmd, pymelNamespace="pc"
+            self.mel_cmd, pymelNamespace="pm"
         )  # 将mel字符串转换为pymel字符串
         pc.cmdScrollFieldExecuter(
             self.py_feild, e=1, t=self.py_cmd
