@@ -1,6 +1,5 @@
-import sys
 from pathlib import Path
-from Qt import QtCore, QtWidgets, QtGui
+from Qt import QtCore, QtWidgets
 import pymel.core as pm
 
 
@@ -43,7 +42,7 @@ class AssetsViewDialog(QtWidgets.QDialog):
         self.model = QtWidgets.QFileSystemModel()  # 创建模型
         self.model.setRootPath(self.root_path)  # 设置模型根路径
         self.model.setNameFilters(["*.ma", "*.mb", "*.fbx"])  # 过滤
-        # self.model.setNameFilterDisables(False)  # 隐藏过滤文件
+        self.model.setNameFilterDisables(False)  # 隐藏过滤文件
         # 设置树视图控件
         self.tree_view = QtWidgets.QTreeView()  # 创建树视图控件
         self.tree_view.setModel(self.model)  # 设置模型
@@ -111,46 +110,69 @@ class AssetsViewDialog(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def show_context_menu(self, position):
-        context_menu = QtWidgets.QMenu()
-        context_menu.addActions(
-            [self.open_action, self.import_action, self.reference_action]
-        )
-        context_menu.exec_(self.mapToGlobal(position))
+        selected_indexes = self.tree_view.selectedIndexes()
+        if selected_indexes and not self.model.isDir(selected_indexes[0]):
+            context_menu = QtWidgets.QMenu()
+            context_menu.addActions(
+                [self.open_action, self.import_action, self.reference_action]
+            )
+            context_menu.exec_(self.mapToGlobal(position))
 
     @QtCore.Slot()
     def open_file(self):
-        file_index = self.tree_view.selectedIndexes()[0]
+        selected_indexes = self.tree_view.selectedIndexes()
+        if not selected_indexes:
+            QtWidgets.QMessageBox.warning(self, "Warning", "No file selected!")
+            return
+        file_index = selected_indexes[0]
         file_path = self.model.filePath(file_index)
         try:
             pm.openFile(file_path, force=True)
         except Exception as e:
-            print(e)
+            QtWidgets.QMessageBox.critical(
+                self, "Error", f"Failed to open file: {str(e)}"
+            )
 
     @QtCore.Slot()
     def import_file(self):
-        file_index = self.tree_view.selectedIndexes()[0]
+        selected_indexes = self.tree_view.selectedIndexes()
+        if not selected_indexes:
+            QtWidgets.QMessageBox.warning(self, "Warning", "No file selected!")
+            return
+        file_index = selected_indexes[0]
         file_path = self.model.filePath(file_index)
         file_name = Path(file_path).stem
         try:
             pm.importFile(file_path, namespace=file_name, force=True)
         except Exception as e:
-            print(e)
+            QtWidgets.QMessageBox.critical(
+                self, "Error", f"Failed to open file: {str(e)}"
+            )
 
     @QtCore.Slot()
     def reference_file(self):
-        file_index = self.tree_view.selectedIndexes()[0]
+        selected_indexes = self.tree_view.selectedIndexes()
+        if not selected_indexes:
+            QtWidgets.QMessageBox.warning(self, "Warning", "No file selected!")
+            return
+        file_index = selected_indexes[0]
         file_path = self.model.filePath(file_index)
         file_name = Path(file_path).stem
         try:
             pm.createReference(file_path, namespace=file_name)
         except Exception as e:
-            print(e)
+            QtWidgets.QMessageBox.critical(
+                self, "Error", f"Failed to open file: {str(e)}"
+            )
 
     @staticmethod
     def get_root_path() -> str:
         scene_path = pm.sceneName()
-        scene_dir = scene_path.dirname()
-        return str(scene_dir)
+        return (
+            str(Path(scene_path).parent)
+            if scene_path
+            else pm.internalVar(userAppDir=True)
+        )
 
     @staticmethod
     def get_maya_main_win():
@@ -167,6 +189,10 @@ class AssetsViewDialog(QtWidgets.QDialog):
         else:
             cls._ui_instance.raise_()
             cls._ui_instance.activateWindow()
+
+    def closeEvent(self, event):
+        AssetsViewDialog._ui_instance = None
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":
