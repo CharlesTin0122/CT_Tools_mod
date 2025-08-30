@@ -14,6 +14,14 @@ from Qt import QtCore, QtWidgets
 
 
 class RibbonCreator(QtWidgets.QDialog):
+    """TODO
+    ribbon_from_polygon()
+        pm.polyToCurve(f=2, dg=3, usm=0, n="temp1")
+        pm.rebuildCurve("temp2", rpo=1, rt=0, s=20, ch=1)
+        pm.loft("temp1", "temp2", r=0, ch=0, u=1, c=0, ar=1,
+                d=1, ss=1, rn=0, po=0, rsn=0, n="ribbonNme")
+    """
+
     _ui_instance = None
 
     def __init__(self, parent=None):
@@ -300,8 +308,8 @@ class RibbonCreator(QtWidgets.QDialog):
         # 创建pin骨骼
         pin_jnt_list = []
         for i in range(pin_num):
-            # 根据pin_num计算位置比例，paramLength有时可能不是0:1，并且防止除0
-            v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1)) * paramLengthV[1]
+            # 根据pin_num计算位置比例，并且防止除0
+            v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1))
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
 
@@ -315,10 +323,12 @@ class RibbonCreator(QtWidgets.QDialog):
         ctrl_jnt_list = []
         ctrl_grp_list = []
         for i in range(ctrl_num):
-            v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1)) * paramLengthV[1]
+            v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1))
             posi_node = pm.createNode(
                 "pointOnSurfaceInfo", name=f"{ribbon_name}_posi_{i}"
             )
+            # 按百分比计算UV
+            posi_node.turnOnPercentage.set(1)
             ctrl_jnt = pm.joint(name=f"{ribbon_name}_ctrlJnt_{i}", radius=5)
             posi_node.parameterU.set(0.5)
             posi_node.parameterV.set(v_pose)
