@@ -1,3 +1,5 @@
-from ribbonCreator.matrix_ribbon import RibbonCreator
+from importlib import reload
+from ribbonCreator import matrix_ribbon
 
-RibbonCreator.show_dialog()
+reload(matrix_ribbon)
+matrix_ribbon.RibbonCreator.show_dialog()

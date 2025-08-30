@@ -73,6 +73,8 @@ class RibbonCreator(QtWidgets.QDialog):
 
         self.ctrl_cb = QtWidgets.QCheckBox("Add Ctrl")
 
+        self.nurbs_btn = QtWidgets.QPushButton("Create Nurbs")
+
         self.pin_label = QtWidgets.QLabel("pin_num: ")
 
         self.pin_spin = QtWidgets.QSpinBox()
@@ -89,7 +91,7 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ctrl_spin.setMaximum(10000)
         self.ctrl_spin.setValue(3)
 
-        self.button = QtWidgets.QPushButton("Create Ribbon")
+        self.ribbon_button = QtWidgets.QPushButton("Create Ribbon")
 
     def create_layouts(self):
         nurbs_layout = QtWidgets.QGridLayout()
@@ -130,18 +132,23 @@ class RibbonCreator(QtWidgets.QDialog):
 
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.addWidget(nurbs_grp)
+        main_layout.addWidget(self.nurbs_btn)
         main_layout.addWidget(ribbon_grp)
-        main_layout.addWidget(self.button)
+        main_layout.addWidget(self.ribbon_button)
 
     def create_connections(self):
         self.orient_comb.currentTextChanged.connect(self.on_orient_comb_changed)
         self.width_double_spin.valueChanged.connect(self.on_width_spin_changed)
         self.length_double_spin.valueChanged.connect(self.on_length_spin_changed)
         self.segment_spin.valueChanged.connect(self.on_segment_spin_changed)
+        self.ctrl_cb.toggled.connect(self.on_ctrl_cb_toggled)
+
+        self.nurbs_btn.clicked.connect(self.on_nurbs_btn_clicked)
+
         self.pin_spin.valueChanged.connect(self.on_pin_spin_changed)
         self.ctrl_spin.valueChanged.connect(self.on_ctrl_spin_changed)
-        self.ctrl_cb.toggled.connect(self.on_ctrl_cb_toggled)
-        self.button.clicked.connect(self.on_button_clicked)
+
+        self.ribbon_button.clicked.connect(self.on_ribbon_button_clicked)
 
     """----------------------------槽函数------------------------------"""
 
@@ -162,19 +169,11 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ribbon_segment_count = value
 
     @QtCore.Slot()
-    def on_pin_spin_changed(self, value):
-        self.ribbon_pin_num = value
-
-    @QtCore.Slot()
-    def on_ctrl_spin_changed(self, value):
-        self.ribbon_ctrl_num = value
-
-    @QtCore.Slot()
     def on_ctrl_cb_toggled(self, check):
         self.create_ctrl = check
 
     @QtCore.Slot()
-    def on_button_clicked(self):
+    def on_nurbs_btn_clicked(self):
         self.ribbon_name = self.name_line.text()
         try:
             self.nurbs_plane = self.create_nurbs_plane(
@@ -184,6 +183,22 @@ class RibbonCreator(QtWidgets.QDialog):
                 self.ribbon_length,
                 self.ribbon_segment_count,
             )
+        except Exception as e:
+            traceback.print_exc()
+            QtWidgets.QMessageBox.warning(self, "Warning", f"{e}")
+
+    @QtCore.Slot()
+    def on_pin_spin_changed(self, value):
+        self.ribbon_pin_num = value
+
+    @QtCore.Slot()
+    def on_ctrl_spin_changed(self, value):
+        self.ribbon_ctrl_num = value
+
+    @QtCore.Slot()
+    def on_ribbon_button_clicked(self):
+        self.ribbon_name = self.name_line.text()
+        try:
             self.create_ribbon(
                 self.nurbs_plane,
                 self.ribbon_name,
@@ -193,7 +208,7 @@ class RibbonCreator(QtWidgets.QDialog):
             )
         except Exception as e:
             traceback.print_exc()
-            pm.displayWarning(e)
+            QtWidgets.QMessageBox.warning(self, "Warning", f"{e}")
 
     """---------------------静态方法和类方法------------------------"""
 
@@ -264,6 +279,8 @@ class RibbonCreator(QtWidgets.QDialog):
             tuple[list, list]: 返回控制骨骼列表和pin骨骼列表
         """
         # 检查变量
+        if pm.selected():
+            nurbs_plane = pm.selected()[0]
         if isinstance(nurbs_plane, str) and pm.objExists(nurbs_plane):
             nurbs_plane = pm.PyNode(nurbs_plane)
         elif isinstance(nurbs_plane, pm.nodetypes.Transform):
@@ -279,7 +296,7 @@ class RibbonCreator(QtWidgets.QDialog):
             raise ValueError("ctrl_num must be a positive integer.")
         # 获取变量
         nurbs_shape = nurbs_plane.getShape()
-        paramLengthV = nurbs_shape.minMaxRangeV.get()  # 一般为0:1
+        paramLengthV = nurbs_shape.minMaxRangeV.get()  # 一般为0:1,环形为0：x
         # 创建pin骨骼
         pin_jnt_list = []
         for i in range(pin_num):
