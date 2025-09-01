@@ -14,13 +14,7 @@ from Qt import QtCore, QtWidgets
 
 
 class RibbonCreator(QtWidgets.QDialog):
-    """TODO
-    ribbon_from_polygon()
-        pm.polyToCurve(f=2, dg=3, usm=0, n="temp1")
-        pm.rebuildCurve("temp2", rpo=1, rt=0, s=20, ch=1)
-        pm.loft("temp1", "temp2", r=0, ch=0, u=1, c=0, ar=1,
-                d=1, ss=1, rn=0, po=0, rsn=0, n="ribbonNme")
-    """
+    """ """
 
     _ui_instance = None
 
@@ -207,26 +201,32 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def on_orient_comb_changed(self, text):
+        """Ribbon朝向下拉菜单槽函数"""
         self.ribbon_axis = self.orient_comb.currentData()
 
     @QtCore.Slot()
     def on_width_spin_changed(self, value):
+        """Ribbon宽度数值控件槽函数"""
         self.ribbon_width = value
 
     @QtCore.Slot()
     def on_length_spin_changed(self, value):
+        """Ribbon长度数值控件槽函数"""
         self.ribbon_length = value
 
     @QtCore.Slot()
     def on_segment_spin_changed(self, value):
+        """Ribbon段数数值控件槽函数"""
         self.ribbon_segment_count = value
 
     @QtCore.Slot()
     def on_ctrl_cb_toggled(self, check):
+        """是否创建控制器复选框"""
         self.create_ctrl = check
 
     @QtCore.Slot()
     def on_nurbs_btn_clicked(self):
+        """创建NURBS平面槽函数"""
         self.ribbon_name = self.name_line.text()
         try:
             self.nurbs_plane = self.create_nurbs_plane(
@@ -242,6 +242,7 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def on_inner_btn_clicked(self):
+        """创建NURBS曲线槽函数"""
         self.inner_curve = self.polygon_to_curve(
             curve_name=f"{self.ribbon_name}_iner_cuv",
         )
@@ -249,6 +250,7 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def on_outer_btn_clicked(self):
+        """创建NURBS曲线槽函数"""
         self.outer_curve = self.polygon_to_curve(
             curve_name=f"{self.ribbon_name}_outer_cuv",
         )
@@ -256,14 +258,17 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def on_flip_normal_cb_toggled(self, check):
+        """是否反转法线"""
         self.is_flip_normal = check
 
     @QtCore.Slot()
     def on_closed_loop_cb_toggled(self, check):
+        """是否闭合曲面"""
         self.is_circular_plane = check
 
     @QtCore.Slot()
     def on_p2n_btn_clicked(self):
+        """polygon to nurbs"""
         self.nurbs_plane = self.polygon_to_nurbs(
             self.ribbon_name,
             self.inner_curve,
@@ -275,14 +280,17 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @QtCore.Slot()
     def on_pin_spin_changed(self, value):
+        """pin骨骼数量"""
         self.ribbon_pin_num = value
 
     @QtCore.Slot()
     def on_ctrl_spin_changed(self, value):
+        """控制骨骼数量"""
         self.ribbon_ctrl_num = value
 
     @QtCore.Slot()
     def on_ribbon_button_clicked(self):
+        """创建Ribbon"""
         self.ribbon_name = self.name_line.text()
         try:
             self.create_ribbon(
@@ -300,6 +308,7 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @staticmethod
     def get_maya_main_window():
+        """获取maya主界面"""
         app = QtWidgets.QApplication.instance()
         if app:
             for widget in app.topLevelWidgets():
@@ -309,6 +318,7 @@ class RibbonCreator(QtWidgets.QDialog):
 
     @classmethod
     def show_dialog(cls):
+        """显示窗口"""
         if not cls._ui_instance:
             cls._ui_instance = RibbonCreator()
         if cls._ui_instance.isHidden():
@@ -336,19 +346,26 @@ class RibbonCreator(QtWidgets.QDialog):
         length_ratio = length / width  # 长宽比
         nurbs_plane = pm.nurbsPlane(
             name=f"{ribbon_name}_plane",
-            pivot=(0, 0, 0),
-            axis=axis,
-            width=width,
-            lengthRatio=length_ratio,
-            degree=3,
-            u=1,
-            v=segment_count,
-            constructionHistory=0,
+            pivot=(0, 0, 0),  # 枢轴位置
+            axis=axis,  # 朝向
+            width=width,  # 宽度
+            lengthRatio=length_ratio,  # 长宽比
+            degree=3,  # 度
+            u=1,  # u方向段数
+            v=segment_count,  # V方向段数
+            constructionHistory=0,  # 是否保留历史
         )
         pm.select(clear=True)
         return nurbs_plane[0]
 
     def polygon_to_curve(self, curve_name):
+        """将选中的多边形边转换为NURBS曲线
+        Args:
+            curve_name (str): 曲线名称
+        Returns:
+            nt.Transform: NURBS曲线
+        """
+
         nirbs_curve = pm.polyToCurve(
             form=2,  # 曲线的形式: 0: 开放曲线 (Open)1: 闭合曲线 (Closed)2: 周期性曲线 (Periodic)，适合生成无缝闭合的曲线。
             degree=3,  # 曲线的度:1（线性）或 3（三次样条曲线，平滑）
@@ -360,6 +377,18 @@ class RibbonCreator(QtWidgets.QDialog):
         return nirbs_curve[0]
 
     def polygon_to_nurbs(self, ribbon_name, inner_curve, outer_curve, is_flip_nornal):
+        """
+        通过Loft命令将两个NURBS曲线 Loft 成一个NURBS曲面
+
+        Args:
+            ribbon_name (str): ribbon名称
+            inner_curve (nt.Transform): 内侧NURBS曲线
+            outer_curve (nt.Transform): 外侧NURBS曲线
+            is_flip_nornal (bool): 是否反转曲面法线
+
+        Returns:
+            nt.Transform: 生成的NURBS曲面
+        """
         nurbs_plane = pm.loft(
             inner_curve,
             outer_curve,
@@ -411,20 +440,23 @@ class RibbonCreator(QtWidgets.QDialog):
             raise ValueError("pin_num must be a positive integer.")
         if not isinstance(ctrl_num, int) or ctrl_num <= 0:
             raise ValueError("ctrl_num must be a positive integer.")
-        # 获取变量
+        # 获取nurbs plane 的形状节点
         nurbs_shape = nurbs_plane.getShape()
         # 创建pin骨骼
         pin_jnt_list = []
-
         for i in range(pin_num):
             # 根据pin_num计算位置比例，uvPin默认以百分比计算UV位置，并且防止除0
+            # 要创建5个pin骨骼，第0个骨骼在v方向0位置，第1个骨骼在v方向1/4位置
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1))
             # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
+            # 要创建5个pin骨骼，第0个骨骼在v方向0位置，第1个骨骼在v方向1/5位置，第4个骨骼在v方向4/5位置
             if self.is_circular_plane:
                 v_pose = i / float(pin_num)
+            # 创建 uvPin 节点
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
+            # 创建pin骨骼
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
-
+            # 设置和连接节点属性
             uvPin_node.coordinate[0].coordinateU.set(0.5)
             uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
@@ -434,23 +466,25 @@ class RibbonCreator(QtWidgets.QDialog):
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
-        # 如果是闭合曲面（首尾相接），少创建一个控制骨骼
         for i in range(ctrl_num):
             v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1))
             # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
             if self.is_circular_plane:
                 v_pose = i / float(ctrl_num)
+            # 创建pointOnSurfaceInfo节点用于计算控制骨骼位置
             posi_node = pm.createNode(
                 "pointOnSurfaceInfo", name=f"{ribbon_name}_posi_{i}"
             )
-            # 按百分比计算UV
+            # 按百分比计算UV，闭合曲面uv有可能是0:x，而不是0:1
             posi_node.turnOnPercentage.set(1)
+            # 创建控制骨骼
             ctrl_jnt = pm.joint(name=f"{ribbon_name}_ctrlJnt_{i}", radius=5)
+            # 设置和连接节点属性
             posi_node.parameterU.set(0.5)
             posi_node.parameterV.set(v_pose)
             nurbs_shape.worldSpace[0].connect(posi_node.inputSurface)
-            position = posi_node.result.position.get()
-            # 如果控制骨骼位置存在，创建控制骨骼和控制器
+            position = posi_node.result.position.get()  # 获取计算出的控制骨骼位置
+            # 如果控制骨骼位置存在，设置控制骨骼位置创建控制器
             if position:
                 ctrl_jnt.setTranslation(position)
                 if create_ctrl:
@@ -461,6 +495,7 @@ class RibbonCreator(QtWidgets.QDialog):
                         normal=self.ribbon_axis,
                         radius=8,
                     )[0]
+                    # 创建控制骨骼偏移组
                     ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
                     # 控制器对齐控制骨骼并约束
                     pm.matchTransform(ctrl_offset_grp, ctrl_jnt)
