@@ -38,6 +38,12 @@ class RibbonCreator(QtWidgets.QDialog):
         self.ribbon_width = 5
         self.ribbon_length = 20
         self.ribbon_segment_count = 5
+
+        self.inner_curve = None
+        self.outer_curve = None
+        self.is_flip_normal = False
+        self.is_circular_plane = False
+
         self.ribbon_pin_num = 5
         self.ribbon_ctrl_num = 3
 
@@ -48,62 +54,77 @@ class RibbonCreator(QtWidgets.QDialog):
         self.create_connections()
 
     def create_widgets(self):
+        # main settings
         self.name_line = QtWidgets.QLineEdit()
         self.name_line.setText("Ribbon")
         self.name_line.setFixedWidth(80)
-
+        self.ctrl_cb = QtWidgets.QCheckBox("Add Ctrl")
+        # Nurbs arguments
         self.orient_comb = QtWidgets.QComboBox()
-        # 添加项目，选项和数据
         self.orient_comb.addItem("x", (1, 0, 0))
         self.orient_comb.addItem("y", (0, 1, 0))
         self.orient_comb.addItem("z", (0, 0, 1))
         self.orient_comb.addItem("-x", (-1, 0, 0))
         self.orient_comb.addItem("-y", (0, -1, 0))
         self.orient_comb.addItem("-z", (0, 0, -1))
-
         self.width_double_spin = QtWidgets.QDoubleSpinBox()
         self.width_double_spin.setFixedWidth(60)
         self.width_double_spin.setMinimum(0.1)
         self.width_double_spin.setMaximum(10000.0)
         self.width_double_spin.setValue(5.0)
-
         self.length_double_spin = QtWidgets.QDoubleSpinBox()
         self.length_double_spin.setFixedWidth(60)
         self.length_double_spin.setMinimum(0.1)
         self.length_double_spin.setMaximum(10000.0)
         self.length_double_spin.setValue(20.0)
-
         self.segment_spin = QtWidgets.QSpinBox()
         self.segment_spin.setFixedWidth(60)
         self.segment_spin.setMinimum(1)
         self.segment_spin.setMaximum(10000)
         self.segment_spin.setValue(5)
 
-        self.ctrl_cb = QtWidgets.QCheckBox("Add Ctrl")
-
+        # create nurbs btn
         self.nurbs_btn = QtWidgets.QPushButton("Create Nurbs")
 
-        self.pin_label = QtWidgets.QLabel("pin_num: ")
+        # poly to nurbs arguments
+        self.inner_edges_btn = QtWidgets.QPushButton("Inner egdes")
+        self.inner_edges_btn.setFixedWidth(120)
+        self.outer_edges_btn = QtWidgets.QPushButton("Outer egdes")
+        self.outer_edges_btn.setFixedWidth(120)
+        self.flip_normal_cb = QtWidgets.QCheckBox("Flip Normals")
+        self.closed_loop_cb = QtWidgets.QCheckBox("Circular Plane")
 
+        self.p2n_btn = QtWidgets.QPushButton("Polygon To Nurbs")
+
+        # ribbon arguments
+        self.pin_label = QtWidgets.QLabel("pin_num: ")
         self.pin_spin = QtWidgets.QSpinBox()
         self.pin_spin.setFixedWidth(60)
         self.pin_spin.setMinimum(1)
         self.pin_spin.setMaximum(10000)
         self.pin_spin.setValue(5)
-
         self.ctrl_label = QtWidgets.QLabel("ctrl_num: ")
-
         self.ctrl_spin = QtWidgets.QSpinBox()
         self.ctrl_spin.setFixedWidth(60)
         self.ctrl_spin.setMinimum(1)
         self.ctrl_spin.setMaximum(10000)
         self.ctrl_spin.setValue(3)
-
+        # ribbon button
         self.ribbon_button = QtWidgets.QPushButton("Create Ribbon")
 
     def create_layouts(self):
+        # mian settings layout
+        settings_layout = QtWidgets.QHBoxLayout()
+        settings_layout.addWidget(QtWidgets.QLabel("name: "))
+        settings_layout.addWidget(self.name_line)
+        settings_layout.addStretch()
+        settings_layout.addWidget(self.ctrl_cb)
+
+        settings_grp = QtWidgets.QGroupBox("Main Settings")
+        settings_grp.setLayout(settings_layout)
+        # nurbs layout
         nurbs_layout = QtWidgets.QGridLayout()
-        nurbs_layout.setSpacing(5)
+        nurbs_layout.setSpacing(3)
         # 设置伸缩，参数1：列索引，参数2：缩放比例
         nurbs_layout.setColumnStretch(0, 0)  # 左 label列，不伸缩
         nurbs_layout.setColumnStretch(1, 0)  # 左输入列，不伸缩
@@ -111,23 +132,34 @@ class RibbonCreator(QtWidgets.QDialog):
         nurbs_layout.setColumnStretch(3, 0)  # 右 label列，不伸缩
         nurbs_layout.setColumnStretch(4, 0)  # 右输入列，不伸缩
 
-        nurbs_layout.addWidget(QtWidgets.QLabel("name: "), 0, 0)
-        nurbs_layout.addWidget(self.name_line, 0, 1)
-        nurbs_layout.addWidget(QtWidgets.QLabel("orient: "), 0, 3)
-        nurbs_layout.addWidget(self.orient_comb, 0, 4)
-
+        nurbs_layout.addWidget(QtWidgets.QLabel("orient: "), 0, 0)
+        nurbs_layout.addWidget(self.orient_comb, 0, 1)
+        nurbs_layout.addWidget(QtWidgets.QLabel("segment: "), 0, 3)
+        nurbs_layout.addWidget(self.segment_spin, 0, 4)
         nurbs_layout.addWidget(QtWidgets.QLabel("width: "), 1, 0)
         nurbs_layout.addWidget(self.width_double_spin, 1, 1)
         nurbs_layout.addWidget(QtWidgets.QLabel("length: "), 1, 3)
         nurbs_layout.addWidget(self.length_double_spin, 1, 4)
 
-        nurbs_layout.addWidget(QtWidgets.QLabel("segment: "), 2, 0)
-        nurbs_layout.addWidget(self.segment_spin, 2, 1)
-        nurbs_layout.addWidget(self.ctrl_cb, 2, 4)
-        # GroupBox包裹layout
-        nurbs_grp = QtWidgets.QGroupBox("NURBS Arguments")
+        nurbs_grp = QtWidgets.QGroupBox("Create NURBS")
         nurbs_grp.setLayout(nurbs_layout)
 
+        # poly to nurbs layout
+        p2n_layout = QtWidgets.QGridLayout()
+        p2n_layout.setSpacing(3)
+        p2n_layout.setColumnStretch(0, 0)
+        p2n_layout.setColumnStretch(1, 1)
+        p2n_layout.setColumnStretch(2, 0)
+
+        p2n_layout.addWidget(self.inner_edges_btn, 0, 0)
+        p2n_layout.addWidget(self.outer_edges_btn, 0, 2)
+        p2n_layout.addWidget(self.flip_normal_cb, 1, 0)
+        p2n_layout.addWidget(self.closed_loop_cb, 1, 2)
+
+        p2n_grp = QtWidgets.QGroupBox("Polygon To Nurbs")
+        p2n_grp.setLayout(p2n_layout)
+
+        # Ribbon layout
         ribbon_layout = QtWidgets.QHBoxLayout()
         ribbon_layout.addWidget(self.pin_label)
         ribbon_layout.addWidget(self.pin_spin)
@@ -135,27 +167,40 @@ class RibbonCreator(QtWidgets.QDialog):
         ribbon_layout.addWidget(self.ctrl_label)
         ribbon_layout.addWidget(self.ctrl_spin)
         # GroupBox包裹layout
-        ribbon_grp = QtWidgets.QGroupBox("Ribbon Arguments")
+        ribbon_grp = QtWidgets.QGroupBox("Create Ribbon ")
         ribbon_grp.setLayout(ribbon_layout)
 
         main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.addWidget(settings_grp)
         main_layout.addWidget(nurbs_grp)
         main_layout.addWidget(self.nurbs_btn)
+
+        main_layout.addWidget(p2n_grp)
+        main_layout.addWidget(self.p2n_btn)
+
         main_layout.addWidget(ribbon_grp)
         main_layout.addWidget(self.ribbon_button)
 
     def create_connections(self):
+        # nurbs arguments
         self.orient_comb.currentTextChanged.connect(self.on_orient_comb_changed)
         self.width_double_spin.valueChanged.connect(self.on_width_spin_changed)
         self.length_double_spin.valueChanged.connect(self.on_length_spin_changed)
         self.segment_spin.valueChanged.connect(self.on_segment_spin_changed)
         self.ctrl_cb.toggled.connect(self.on_ctrl_cb_toggled)
-
         self.nurbs_btn.clicked.connect(self.on_nurbs_btn_clicked)
 
+        # poly to nurbs
+        self.inner_edges_btn.clicked.connect(self.on_inner_btn_clicked)
+        self.outer_edges_btn.clicked.connect(self.on_outer_btn_clicked)
+        self.flip_normal_cb.toggled.connect(self.on_flip_normal_cb_toggled)
+        self.closed_loop_cb.toggled.connect(self.on_closed_loop_cb_toggled)
+        self.p2n_btn.clicked.connect(self.on_p2n_btn_clicked)
+
+        # ribbon arguments
         self.pin_spin.valueChanged.connect(self.on_pin_spin_changed)
         self.ctrl_spin.valueChanged.connect(self.on_ctrl_spin_changed)
-
+        # ribbon btn
         self.ribbon_button.clicked.connect(self.on_ribbon_button_clicked)
 
     """----------------------------槽函数------------------------------"""
@@ -194,6 +239,39 @@ class RibbonCreator(QtWidgets.QDialog):
         except Exception as e:
             traceback.print_exc()
             QtWidgets.QMessageBox.warning(self, "Warning", f"{e}")
+
+    @QtCore.Slot()
+    def on_inner_btn_clicked(self):
+        self.inner_curve = self.polygon_to_curve(
+            curve_name=f"{self.ribbon_name}_iner_cuv",
+        )
+        return self.inner_curve
+
+    @QtCore.Slot()
+    def on_outer_btn_clicked(self):
+        self.outer_curve = self.polygon_to_curve(
+            curve_name=f"{self.ribbon_name}_outer_cuv",
+        )
+        return self.outer_curve
+
+    @QtCore.Slot()
+    def on_flip_normal_cb_toggled(self, check):
+        self.is_flip_normal = check
+
+    @QtCore.Slot()
+    def on_closed_loop_cb_toggled(self, check):
+        self.is_circular_plane = check
+
+    @QtCore.Slot()
+    def on_p2n_btn_clicked(self):
+        self.nurbs_plane = self.polygon_to_nurbs(
+            self.ribbon_name,
+            self.inner_curve,
+            self.outer_curve,
+            self.is_flip_normal,  # 是否反转曲面法线
+        )
+        pm.delete(self.inner_curve)
+        pm.delete(self.outer_curve)
 
     @QtCore.Slot()
     def on_pin_spin_changed(self, value):
@@ -266,8 +344,39 @@ class RibbonCreator(QtWidgets.QDialog):
             u=1,
             v=segment_count,
             constructionHistory=0,
-        )[0]
-        return nurbs_plane
+        )
+        pm.select(clear=True)
+        return nurbs_plane[0]
+
+    def polygon_to_curve(self, curve_name):
+        nirbs_curve = pm.polyToCurve(
+            form=2,  # 曲线的形式: 0: 开放曲线 (Open)1: 闭合曲线 (Closed)2: 周期性曲线 (Periodic)，适合生成无缝闭合的曲线。
+            degree=3,  # 曲线的度:1（线性）或 3（三次样条曲线，平滑）
+            conformToSmoothMeshPreview=0,  # 是否使用均匀间距: 0: 非均匀间距 1:强制均匀间距。
+            name="curve_name",
+        )
+        pm.select(clear=True)
+        # pm.rebuildCurve("temp2", rpo=1, rt=0, s=20, ch=1)
+        return nirbs_curve[0]
+
+    def polygon_to_nurbs(self, ribbon_name, inner_curve, outer_curve, is_flip_nornal):
+        nurbs_plane = pm.loft(
+            inner_curve,
+            outer_curve,
+            reverse=0,  # 是否反转曲线的方向
+            constructionHistory=0,  # 是否保留构造历史
+            uniform=1,  # 是否使用均匀参数化。
+            close=0,  # 是否闭合曲面，如果设置为true,则生成的表面将是封闭的(周期性)的,起点(终点)都在第一条曲线处。
+            autoReverse=1,  # 自动调整曲面方向
+            degree=3,  # 生成曲面的度数
+            sectionSpans=1,  # 曲面的跨度数
+            range=0,  # 是否使用完整曲线范围
+            polygon=0,  # 是否生成多边形曲面。
+            reverseSurfaceNormals=is_flip_nornal,  # 是否反转曲面法线，通过UV交换来实现
+            name=f"{ribbon_name}_plane",
+        )
+        pm.select(clear=True)
+        return nurbs_plane[0]
 
     def create_ribbon(
         self, nurbs_plane, ribbon_name, pin_num, ctrl_num, create_ctrl=False
@@ -306,9 +415,13 @@ class RibbonCreator(QtWidgets.QDialog):
         nurbs_shape = nurbs_plane.getShape()
         # 创建pin骨骼
         pin_jnt_list = []
+
         for i in range(pin_num):
             # 根据pin_num计算位置比例，uvPin默认以百分比计算UV位置，并且防止除0
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1))
+            # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
+            if self.is_circular_plane:
+                v_pose = i / float(pin_num)
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
 
@@ -321,8 +434,12 @@ class RibbonCreator(QtWidgets.QDialog):
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
+        # 如果是闭合曲面（首尾相接），少创建一个控制骨骼
         for i in range(ctrl_num):
             v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1))
+            # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
+            if self.is_circular_plane:
+                v_pose = i / float(ctrl_num)
             posi_node = pm.createNode(
                 "pointOnSurfaceInfo", name=f"{ribbon_name}_posi_{i}"
             )
