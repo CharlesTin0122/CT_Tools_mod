@@ -304,11 +304,10 @@ class RibbonCreator(QtWidgets.QDialog):
             raise ValueError("ctrl_num must be a positive integer.")
         # 获取变量
         nurbs_shape = nurbs_plane.getShape()
-        paramLengthV = nurbs_shape.minMaxRangeV.get()  # 一般为0:1,环形为0：x
         # 创建pin骨骼
         pin_jnt_list = []
         for i in range(pin_num):
-            # 根据pin_num计算位置比例，并且防止除0
+            # 根据pin_num计算位置比例，uvPin默认以百分比计算UV位置，并且防止除0
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1))
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
