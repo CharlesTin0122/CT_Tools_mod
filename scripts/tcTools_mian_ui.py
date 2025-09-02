@@ -14,7 +14,8 @@ from Qt.QtWidgets import (
     QMenuBar,
 )
 
-from Qt.QtCore import Qt
+from Qt.QtCore import Qt, QSize
+from Qt.QtGui import QColor
 
 
 # --- 主窗口类 ---
@@ -89,11 +90,14 @@ class TcToolsUI(QDialog):
         """一个辅助函数，用于创建并填充一个 QListWidget"""
         # 创建列表控件
         list_widget = QListWidget()
+        list_widget.setSpacing(2)
         list_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
         list_widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         # 遍历分类下的脚本列表，创建列表控件项目
         for item in item_list:
             item = QListWidgetItem(item)
+            item.setSizeHint(QSize(100, 25))
+            item.setBackgroundColor(QColor(96, 96, 96))
             # 设置列表控件项目数据
             item.setData(Qt.UserRole, [category, item])
             list_widget.addItem(item)
