@@ -46,9 +46,10 @@ class TcToolsUI(QDialog):
         search_layout.setContentsMargins(10, 5, 10, 5)
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("搜索...")
+        self.search_bar.textChanged.connect(self.filter_tools)
         search_layout.addWidget(self.search_bar)
         main_layout.addLayout(search_layout)
-        # 线框
+        # 分割线
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
@@ -97,6 +98,25 @@ class TcToolsUI(QDialog):
             item.setData(Qt.UserRole, [category, item])
             list_widget.addItem(item)
         return list_widget
+
+    def filter_tools(self, text):
+        """实现搜索框功能"""
+        search_text = text.lower().strip()
+        # 遍历工具盒项
+        for index in range(self.tool_box.count()):
+            list_widget = self.tool_box.widget(index)
+            if not isinstance(list_widget, QListWidget):
+                continue
+            # 遍历工具盒列表项
+            for row in range(list_widget.count()):
+                item = list_widget.item(row)
+                item_text = item.text().lower()
+                # 如果搜索关键测存在 且不包含在列表项名称内，隐藏项
+                if search_text and search_text not in item_text:
+                    item.setHidden(True)
+                # 否则显示
+                else:
+                    item.setHidden(False)
 
     def on_item_double_clicked(self, item):
         category_name, list_item = item.data(Qt.UserRole)
