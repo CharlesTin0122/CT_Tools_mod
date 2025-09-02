@@ -1,6 +1,5 @@
-def main():
-    print("Hello from ct-tools-mod!")
+from pathlib import Path
 
 
-if __name__ == "__main__":
-    main()
+print(Path(__file__).parent)
+print(Path.cwd())

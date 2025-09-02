@@ -1,149 +1,117 @@
-import sys
+from pathlib import Path
+import importlib
+import traceback
 from Qt.QtWidgets import (
     QApplication,
-    QWidget,
+    QDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
-    QTreeWidget,
-    QTreeWidgetItem,
+    QToolBox,
+    QListWidget,
+    QListWidgetItem,
     QFrame,
-    QToolButton,
+    QMenuBar,
 )
-from Qt.QtGui import QFont
+
 from Qt.QtCore import Qt
 
 
 # --- 主窗口类 ---
-class TcToolsUI(QWidget):
+class TcToolsUI(QDialog):
     _ui_instance = None
 
     def __init__(self, parent=None):
         if parent is None:
             parent = TcToolsUI.maya_main_window()
         super().__init__(parent)
-        self.setWindowTitle("Tc TOOLS V1.0")
+        self.setWindowTitle("Tc Tools V1.0")
         self.setGeometry(300, 300, 350, 600)
-
-        # 初始化UI
         self.init_ui()
 
     def init_ui(self):
+        # 主布局
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # --- 1. 顶部栏 (与之前相同) ---
-        top_bar_widget = self._create_top_bar()
-        main_layout.addWidget(top_bar_widget)
+        # 菜单栏和搜索栏
 
-        # --- 2. 搜索栏 (与之前相同) ---
+        self.menu_bar = QMenuBar()
+        edit_menu = self.menu_bar.addMenu("Edit")
+        help_menu = self.menu_bar.addMenu("Help")
+        main_layout.addWidget(self.menu_bar)
+        # 搜索栏
         search_layout = QHBoxLayout()
         search_layout.setContentsMargins(10, 5, 10, 5)
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("搜索...")
         search_layout.addWidget(self.search_bar)
         main_layout.addLayout(search_layout)
-
+        # 线框
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         line.setStyleSheet("background-color: #444;")
         main_layout.addWidget(line)
 
-        # --- 3. 功能列表 (关键改动) ---
-        # 使用 QTreeWidget 替换 QListWidget
-        self.tool_tree = QTreeWidget()
-        self.tool_tree.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.tool_tree.setHeaderHidden(True)  # 隐藏默认的表头
-        self.tool_tree.setIndentation(10)  # 设置子项的缩进
-        self.populate_tool_tree()  # 调用新的填充函数
-        main_layout.addWidget(self.tool_tree)
+        # 功能区域 (使用 QToolBox)
+        self.tool_box = QToolBox()
+        self.tool_box.setContentsMargins(5, 10, 5, 10)
+
+        self.populate_tool_box()
+        main_layout.addWidget(self.tool_box)
 
         self.setLayout(main_layout)
 
-    def _create_top_bar(self):
-        """创建一个自定义的顶部栏Widget (与之前相同)"""
-        top_bar_widget = QWidget()
-        top_bar_layout = QHBoxLayout(top_bar_widget)
-        top_bar_layout.setContentsMargins(10, 5, 10, 5)
-        top_bar_layout.setSpacing(10)
+    def populate_tool_box(self):
+        """填充 QToolBox 的内容"""
+        # 确定菜单分类
+        category_list = ["modeling", "Rigging", "Animation", "TD"]
+        # 获取当前脚本所在路径：scripts/
+        current_file_path = Path(__file__).parent
+        # 根据分类和类别下的脚本
+        for category in category_list:
+            item_list = []
+            # 拼接路径：scripts/Rigging
+            item_path = Path(current_file_path, category)
+            # 获取路径下所有py文件
+            item_list = [
+                str(f.stem) for f in Path(item_path).glob("*.py") if Path(f).is_file()
+            ]
+            # 创建工具列表控件
+            list_widget = self._create_tool_list_widget(category, item_list)
+            # tool_box添加项目
+            self.tool_box.addItem(list_widget, category)
 
-        profile_label = QLabel()
+    def _create_tool_list_widget(self, category, item_list):
+        """一个辅助函数，用于创建并填充一个 QListWidget"""
+        # 创建列表控件
+        list_widget = QListWidget()
+        list_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+        list_widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # 遍历分类下的脚本列表，创建列表控件项目
+        for item in item_list:
+            item = QListWidgetItem(item)
+            # 设置列表控件项目数据
+            item.setData(Qt.UserRole, [category, item])
+            list_widget.addItem(item)
+        return list_widget
 
-        profile_label.setFixedSize(40, 40)
-
-        btn_edit = QToolButton()
-
-        btn_settings = QToolButton()
-
-        btn_office = QToolButton()
-
-        btn_help = QToolButton()
-
-        btn_power = QToolButton()
-        btn_power.setObjectName("PowerButton")
-
-        for btn in [btn_edit, btn_settings, btn_office, btn_help, btn_power]:
-            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-
-        top_bar_layout.addWidget(profile_label)
-        top_bar_layout.addWidget(btn_edit)
-        top_bar_layout.addWidget(btn_settings)
-        top_bar_layout.addWidget(btn_office)
-        top_bar_layout.addWidget(btn_help)
-        top_bar_layout.addStretch()
-        top_bar_layout.addWidget(btn_power)
-
-        return top_bar_widget
-
-    def populate_tool_tree(self):
-        """填充功能树 (关键改动)"""
-        # --- 收藏夹 分类 ---
-        fav_category = self.add_category_item(self.tool_tree, "收藏夹")
-        self.add_tool_item(fav_category, "全部")
-        # 添加“绑定”并保存为变量，以便后续添加子项
-        binding_item = self.add_tool_item(fav_category, "绑定")
-        self.add_tool_item(binding_item, "JT_Controller_Tools_Ver_2.0")
-        self.add_tool_item(binding_item, "blendDivider_ver_1.0")
-
-        # 默认展开“收藏夹”和“绑定”
-        fav_category.setExpanded(True)
-        binding_item.setExpanded(True)
-
-        # 选中“绑定”的子项，使其父项高亮
-        self.tool_tree.setCurrentItem(binding_item.child(0))
-
-        # --- 动画 分类 ---
-        anim_category = self.add_category_item(self.tool_tree, "动画")
-        # 可以在这里为“动画”分类添加子项
-        # self.add_tool_item(anim_category, "工具A", "icons/some_icon.png")
-
-        # --- 模型 分类 ---
-        model_category = self.add_category_item(self.tool_tree, "模型")
-
-        # --- 渲染 分类 ---
-        render_category = self.add_category_item(
-            self.tool_tree,
-            "渲染",
-        )
-
-    def add_category_item(self, parent, text):
-        """添加一个分类标题项"""
-        item = QTreeWidgetItem(parent, [text])
-        font = QFont()
-        font.setBold(True)
-        item.setFont(0, font)
-        return item
-
-    def add_tool_item(self, parent, text):
-        """添加一个工具项"""
-        item = QTreeWidgetItem(parent, [text])
-        return item
+    def on_item_double_clicked(self, item):
+        category_name, list_item = item.data(Qt.UserRole)
+        try:
+            # 动态导入，执行脚本
+            module_name = f"{category_name}.{list_item.text()}"
+            module = importlib.import_module(module_name)
+            importlib.reload(module)
+            traceback.print_exc()
+        except Exception as e:
+            print(f"Error running {item.text()}.py: {e}")
 
     @staticmethod
     def maya_main_window():
+        """获取maya主界面的pyside实例"""
         app = QApplication.instance()
         if app:
             for widget in app.topLevelWidgets():
@@ -151,13 +119,17 @@ class TcToolsUI(QWidget):
                     return widget
         return None
 
+    # 创建单例窗口
     @classmethod
-    def show_singleton_dialog(cls):
+    def show_ui(cls):
+        """显示单例窗口"""
+        # 如果窗口单例为空，则创建窗口单例
         if not cls._ui_instance:
             cls._ui_instance = cls()
-
+        # 如果窗口单例被隐藏，则显示
         if cls._ui_instance.isHidden():
             cls._ui_instance.show()
+        # 其他情况，抬升窗口并激活
         else:
             cls._ui_instance.raise_()
             cls._ui_instance.activateWindow()
@@ -165,4 +137,4 @@ class TcToolsUI(QWidget):
 
 # --- 程序入口 ---
 if __name__ == "__main__":
-    TcToolsUI().show_singleton_dialog()
+    TcToolsUI.show_ui()
