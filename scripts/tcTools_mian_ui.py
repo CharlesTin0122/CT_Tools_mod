@@ -105,9 +105,10 @@ class TcToolsUI(QDialog):
             module_name = f"{category_name}.{list_item.text()}"
             module = importlib.import_module(module_name)
             importlib.reload(module)
-            traceback.print_exc()
+
         except Exception as e:
             print(f"Error running {item.text()}.py: {e}")
+            traceback.print_exc()
 
     @staticmethod
     def maya_main_window():
