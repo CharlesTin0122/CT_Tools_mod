@@ -135,8 +135,6 @@ class AssetsViewDialog(QtWidgets.QDialog):
                     self.open_action,
                     self.import_action,
                     self.reference_action,
-                    self.rename_action,
-                    self.reveal_action,
                 ]
             )
             context_menu.addSeparator()  # 添加一个分隔符，让UI更清晰
