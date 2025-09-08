@@ -139,6 +139,13 @@ class AssetsViewDialog(QtWidgets.QDialog):
                     self.reveal_action,
                 ]
             )
+            context_menu.addSeparator()  # 添加一个分隔符，让UI更清晰
+            context_menu.addActions(
+                [
+                    self.rename_action,
+                    self.reveal_action,
+                ]
+            )
             context_menu.exec_(self.tree_view.mapToGlobal(position))
 
     @QtCore.Slot()
