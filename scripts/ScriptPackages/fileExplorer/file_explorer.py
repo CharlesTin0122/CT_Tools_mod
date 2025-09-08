@@ -5,11 +5,11 @@
 @Author  :   Charles Tian
 @Version :   1.0
 @Contact :   tianchao0533@gmail.com
-@Desc    :   当前文件作用
+@Desc    :   简单资产浏览器，打开当前场景资产路径，可打开、导入、引用、重命名和转到文件所在路径
 """
 
 from pathlib import Path
-from Qt import QtCore, QtWidgets, QtGui
+from Qt import QtCore, QtWidgets
 import pymel.core as pm
 
 
@@ -27,6 +27,7 @@ class AssetsViewDialog(QtWidgets.QDialog):
         self.setMinimumSize(800, 500)
         # 默认根路径为：D:\Backup\Documents\maya
         self.root_path = pm.internalVar(userAppDir=True)
+        self.namespace = None
         # 构建界面
         self.create_actions()
         self.create_widgets()
@@ -42,6 +43,7 @@ class AssetsViewDialog(QtWidgets.QDialog):
         self.open_action = QtWidgets.QAction("Open", self)
         self.import_action = QtWidgets.QAction("Import", self)
         self.reference_action = QtWidgets.QAction("Reference", self)
+        self.rename_action = QtWidgets.QAction("Rename", self)
         self.reveal_action = QtWidgets.QAction("Reveal", self)
 
     def create_widgets(self):
@@ -56,6 +58,10 @@ class AssetsViewDialog(QtWidgets.QDialog):
         self.path_label = QtWidgets.QLabel(self.root_path)
         self.path_label.setFixedHeight(30)
         self.path_label.setStyleSheet("font-size: 16px;")
+        # 名称空间
+        self.namespace_label = QtWidgets.QLabel("Namespace: ")
+        self.namesapce_line = QtWidgets.QLineEdit()
+        self.namesapce_line.setFixedWidth(120)
         # 设置树视图模型，用于表示文件系统的层次结构（如目录和文件）
         self.model = QtWidgets.QFileSystemModel()  # 创建模型
         self.model.setRootPath(self.root_path)  # 设置模型根路径
@@ -74,13 +80,19 @@ class AssetsViewDialog(QtWidgets.QDialog):
 
     def create_layout(self):
         """创建布局"""
+        path_layout = QtWidgets.QHBoxLayout()
+        path_layout.addWidget(self.path_label)
+        path_layout.addStretch()
+        path_layout.addWidget(self.namespace_label)
+        path_layout.addWidget(self.namesapce_line)
+
         btn_layou = QtWidgets.QHBoxLayout()
         btn_layou.addWidget(self.refresh_btn)
         btn_layou.addWidget(self.go_up_btn)
 
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(2, 2, 2, 2)
-        main_layout.addWidget(self.path_label)
+        main_layout.addLayout(path_layout)
         main_layout.addWidget(self.tree_view)
         main_layout.addLayout(btn_layou)
 
@@ -92,6 +104,7 @@ class AssetsViewDialog(QtWidgets.QDialog):
         self.open_action.triggered.connect(self.open_file)  # 打开
         self.import_action.triggered.connect(self.import_file)  # 导入
         self.reference_action.triggered.connect(self.reference_file)  # 参考
+        self.rename_action.triggered.connect(self.rename_file)  # 重命名
         self.reveal_action.triggered.connect(self.reveal_in_explorer)  # 转到
 
     def refresh_file_list(self, file_path):
@@ -122,6 +135,7 @@ class AssetsViewDialog(QtWidgets.QDialog):
                     self.open_action,
                     self.import_action,
                     self.reference_action,
+                    self.rename_action,
                     self.reveal_action,
                 ]
             )
@@ -191,9 +205,11 @@ class AssetsViewDialog(QtWidgets.QDialog):
             return
         file_index = selected_indexes[0]
         file_path = self.model.filePath(file_index)
-        file_name = Path(file_path).stem  # 文件名称（移除后缀）
+        self.namespace = self.namesapce_line.text()
+        if not self.namespace:
+            self.namespace = Path(file_path).stem
         try:
-            pm.importFile(file_path, namespace=file_name, force=True)
+            pm.importFile(file_path, namespace=self.namespace, force=True)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self, "Error", f"Failed to open file: {str(e)}"
@@ -208,12 +224,64 @@ class AssetsViewDialog(QtWidgets.QDialog):
             return
         file_index = selected_indexes[0]
         file_path = self.model.filePath(file_index)
-        file_name = Path(file_path).stem
+        self.namespace = self.namesapce_line.text()
+        if not self.namespace:
+            self.namespace = Path(file_path).stem
         try:
-            pm.createReference(file_path, namespace=file_name)
+            pm.createReference(file_path, namespace=self.namespace)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self, "Error", f"Failed to open file: {str(e)}"
+            )
+
+    @QtCore.Slot()
+    def rename_file(self):
+        """重命名槽函数"""
+        # 获取选中对象
+        selected_indexes = self.tree_view.selectedIndexes()
+        if not selected_indexes:
+            return
+        file_index = selected_indexes[0]
+        old_path_str = self.model.filePath(file_index)
+        old_path = Path(old_path_str)
+
+        old_name = old_path.stem
+        sufix = old_path.suffix
+        # 弹出对话框，获取新名称
+        new_name, ok = QtWidgets.QInputDialog.getText(
+            self,
+            "Rename file",
+            f"Enter new name for {old_path.name}: ",
+            QtWidgets.QLineEdit.Normal,
+            old_name,
+        )
+        # 如果用户点击取消或输入为空，则中止操作，strip:移除前后空白字符。
+        if not ok or not new_name.strip():
+            return
+        # 如果名称没有改变，也中止操作
+        if new_name == old_name:
+            return
+        # 检查非法字符
+        invalid_chars = r'<>:"/\|?*'
+        if any(char in invalid_chars for char in new_name):
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Invalid Name",
+                f"The file name cannot contain any of the following characters:\n{invalid_chars}",
+            )
+            return
+        # 执行重命名
+        new_path = old_path.with_name(f"{new_name}{sufix}")
+        if new_path.exists():
+            QtWidgets.QMessageBox.warning(
+                self, "Rename Failed", f"A file named '{new_path.name}' already exists."
+            )
+            return
+        try:
+            old_path.rename(new_path)
+        except OSError as e:
+            QtWidgets.QMessageBox.critical(
+                self, "Error", f"Failed to rename file: {str(e)}"
             )
 
     @QtCore.Slot()
