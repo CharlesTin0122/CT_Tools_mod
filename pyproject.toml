@@ -9,4 +9,5 @@ dependencies = [
     "pyside6>=6.9.2",
     "qt-py>=1.4.6",
     "types-maya-strict>=2025.0.6",
+    "types-pyside2>=5.15.2.1.7",
 ]

@@ -1,24 +1,27 @@
+from pathlib import Path
 from PySide2 import QtCore, QtWidgets
 from PySide2 import QtUiTools
-from Qt import QtCompat
+# from Qt import QtCompat
 
 
 class DesignerUI(QtWidgets.QDialog):
     _ui_instance = None
-    WINDOW_TITLE = "Template"
+    WINDOW_TITLE = "Qt Designer Template"
 
-    def __init__(self, parent=None):
+    def __init__(self, ui_path=None, parent=None):
         if parent is None:
             parent = self.get_maya_main_window()
         super().__init__(parent)
 
         self.setWindowTitle(DesignerUI.WINDOW_TITLE)
 
-        self.init_ui()
+        self.init_ui(ui_path)
         self.create_layout()
         self.create_connections()
 
-    def init_ui(self):
+    def init_ui(self, ui_path=None):
+        if not ui_path:
+            ui_path = f"{Path(__file__).parent}/quick_start.ui"
         # Qt.py 库的用法
         # self.ui = QtCompat.loadUi(
         #     r"D:\CT_Tools_mod\scripts\ScriptPackages\Extra\quick_start.ui",
@@ -26,7 +29,8 @@ class DesignerUI(QtWidgets.QDialog):
         # )
 
         # PySide2的用法
-        f = QtCore.QFile(r"D:\CT_Tools_mod\scripts\ScriptPackages\Extra\quick_start.ui")
+
+        f = QtCore.QFile(ui_path)
         f.open(QtCore.QFile.ReadOnly)
 
         loader = QtUiTools.QUiLoader()
@@ -67,10 +71,10 @@ class DesignerUI(QtWidgets.QDialog):
         return None
 
     @classmethod
-    def show_ui(cls):
+    def show_ui(cls, ui_Path=None):
         """单例模式显示UI"""
         if cls._ui_instance is None:
-            cls._ui_instance = DesignerUI()
+            cls._ui_instance = DesignerUI(ui_Path)
         if cls._ui_instance.isHidden():
             cls._ui_instance.show()
         else:
@@ -79,4 +83,6 @@ class DesignerUI(QtWidgets.QDialog):
 
 
 if __name__ == "__main__":
-    DesignerUI.show_ui()
+    # 在maya中直接运行需要绝对路径
+    ui_path = r"D:\CT_Tools_mod\scripts\ScriptPackages\Extra\quick_start.ui"
+    DesignerUI.show_ui(ui_path)
