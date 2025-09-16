@@ -36,7 +36,7 @@ class RibbonCreator(QtWidgets.QDialog):
         self.inner_curve = None
         self.outer_curve = None
         self.is_flip_normal = False
-        self.is_circular_plane = False
+        self.is_ring_plane = False
 
         self.ribbon_pin_num = 5
         self.ribbon_ctrl_num = 3
@@ -264,7 +264,7 @@ class RibbonCreator(QtWidgets.QDialog):
     @QtCore.Slot()
     def on_closed_loop_cb_toggled(self, check):
         """是否闭合曲面"""
-        self.is_circular_plane = check
+        self.is_ring_plane = check
 
     @QtCore.Slot()
     def on_p2n_btn_clicked(self):
@@ -450,68 +450,85 @@ class RibbonCreator(QtWidgets.QDialog):
             v_pose = 0.0 if pin_num == 1 else (i / float(pin_num - 1))
             # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
             # 要创建5个pin骨骼，第0个骨骼在v方向0位置，第1个骨骼在v方向1/5位置，第4个骨骼在v方向4/5位置
-            if self.is_circular_plane:
+            if self.is_ring_plane:
                 v_pose = i / float(pin_num)
             # 创建 uvPin 节点
-            uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
+            ctrl_uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             # 创建pin骨骼
-            pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
+            ctrl_pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
             # 设置和连接节点属性
-            uvPin_node.coordinate[0].coordinateU.set(0.5)
-            uvPin_node.coordinate[0].coordinateV.set(v_pose)
+            ctrl_uvPin_node.coordinate[0].coordinateU.set(0.5)
+            ctrl_uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
-            nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
-            # 连接骨骼变换
-            decomposeMatrix_node = pm.createNode(
+            nurbs_shape.worldSpace[0].connect(ctrl_uvPin_node.deformedGeometry)
+            # 连接骨骼变换，替换以下命令
+            # uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
+            ctrl_decomposeMatrix_node = pm.createNode(
                 "decomposeMatrix", name=f"decomposeMatrix{i}"
             )
-            uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
-            decomposeMatrix_node.outputTranslate.connect(pin_jnt.translate)
-            decomposeMatrix_node.outputRotate.connect(pin_jnt.rotate)
-            decomposeMatrix_node.outputScale.connect(pin_jnt.scale)
+            ctrl_uvPin_node.outputMatrix[0].connect(
+                ctrl_decomposeMatrix_node.inputMatrix
+            )
+            ctrl_decomposeMatrix_node.outputTranslate.connect(ctrl_pin_jnt.translate)
+            ctrl_decomposeMatrix_node.outputRotate.connect(ctrl_pin_jnt.rotate)
+            ctrl_decomposeMatrix_node.outputScale.connect(ctrl_pin_jnt.scale)
+
             # 添加列表
-            pin_jnt_list.append(pin_jnt)
+            pin_jnt_list.append(ctrl_pin_jnt)
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
         for i in range(ctrl_num):
             v_pose = 0 if ctrl_num == 1 else (i / float(ctrl_num - 1))
-            # 如果是闭合曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
-            if self.is_circular_plane:
+            # 如果是环形曲面（首尾相接），则多计算一个段数，防止首尾骨骼重合
+            if self.is_ring_plane:
                 v_pose = i / float(ctrl_num)
-            # 创建pointOnSurfaceInfo节点用于计算控制骨骼位置
-            posi_node = pm.createNode(
-                "pointOnSurfaceInfo", name=f"{ribbon_name}_posi_{i}"
+
+            # 创建 uvPin 节点
+            ctrl_uvPin_node = pm.createNode(
+                "uvPin", name=f"{ribbon_name}_ctrluvPin_{i}"
             )
-            # 按百分比计算UV，闭合曲面uv有可能是0:x，而不是0:1
-            posi_node.turnOnPercentage.set(1)
-            # 创建控制骨骼
-            ctrl_jnt = pm.joint(name=f"{ribbon_name}_ctrlJnt_{i}", radius=5)
+            # 创建pin骨骼
+            ctrl_pin_jnt = pm.joint(name=f"{ribbon_name}_ctrljnt_{i}", radius=3)
             # 设置和连接节点属性
-            posi_node.parameterU.set(0.5)
-            posi_node.parameterV.set(v_pose)
-            nurbs_shape.worldSpace[0].connect(posi_node.inputSurface)
-            position = posi_node.result.position.get()  # 获取计算出的控制骨骼位置
-            # 如果控制骨骼位置存在，设置控制骨骼位置创建控制器
-            if position:
-                ctrl_jnt.setTranslation(position)
-                if create_ctrl:
-                    ctrl_name = f"{ribbon_name}_ctrl_{i}"
-                    ctrl = pm.circle(
-                        name=ctrl_name,
-                        constructionHistory=False,
-                        normal=self.ribbon_axis,
-                        radius=8,
-                    )[0]
-                    # 创建控制骨骼偏移组
-                    ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
-                    # 控制器对齐控制骨骼并约束
-                    pm.matchTransform(ctrl_offset_grp, ctrl_jnt)
-                    pm.parentConstraint(ctrl, ctrl_jnt, maintainOffset=True)
-                    pm.scaleConstraint(ctrl, ctrl_jnt, maintainOffset=True)
-                    ctrl_grp_list.append(ctrl_offset_grp)
-            ctrl_jnt_list.append(ctrl_jnt)
-            pm.delete(posi_node)
+            ctrl_uvPin_node.coordinate[0].coordinateU.set(0.5)
+            ctrl_uvPin_node.coordinate[0].coordinateV.set(v_pose)
+
+            nurbs_shape.worldSpace[0].connect(ctrl_uvPin_node.deformedGeometry)
+            # 连接骨骼变换，替换以下命令
+            # uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
+            ctrl_decomposeMatrix_node = pm.createNode(
+                "decomposeMatrix", name=f"ctrl_decomposeMatrix{i}"
+            )
+            ctrl_uvPin_node.outputMatrix[0].connect(
+                ctrl_decomposeMatrix_node.inputMatrix
+            )
+            ctrljnt_translate = ctrl_decomposeMatrix_node.outputTranslate.get()
+            ctrljnt_rotate = ctrl_decomposeMatrix_node.outputRotate.get()
+            ctrljnt_scale = ctrl_decomposeMatrix_node.outputScale.get()
+            ctrl_pin_jnt.translate.set(ctrljnt_translate)
+            ctrl_pin_jnt.rotate.set(ctrljnt_rotate)
+            ctrl_pin_jnt.scale.set(ctrljnt_scale)
+            # 断开连接， 移除节点
+            pm.delete(ctrl_decomposeMatrix_node, ctrl_uvPin_node)
+            # 设置控制骨骼位置创建控制器
+            if create_ctrl:
+                ctrl_name = f"{ribbon_name}_ctrl_{i}"
+                ctrl = pm.circle(
+                    name=ctrl_name,
+                    constructionHistory=False,
+                    normal=self.ribbon_axis,
+                    radius=8,
+                )[0]
+                # 创建控制骨骼偏移组
+                ctrl_offset_grp = pm.group(ctrl, name=f"{ctrl_name}_offset")
+                # 控制器对齐控制骨骼并约束
+                pm.matchTransform(ctrl_offset_grp, ctrl_pin_jnt)
+                pm.parentConstraint(ctrl, ctrl_pin_jnt, maintainOffset=True)
+                pm.scaleConstraint(ctrl, ctrl_pin_jnt, maintainOffset=True)
+                ctrl_grp_list.append(ctrl_offset_grp)
+            ctrl_jnt_list.append(ctrl_pin_jnt)
+
         # 控制骨骼蒙皮到nur平面
         pm.skinCluster(nurbs_plane, ctrl_jnt_list)
         # 打组，整理场景
