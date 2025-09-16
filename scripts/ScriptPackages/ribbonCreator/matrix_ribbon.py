@@ -461,7 +461,15 @@ class RibbonCreator(QtWidgets.QDialog):
             uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
             nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
-            uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
+            # 连接骨骼变换
+            decomposeMatrix_node = pm.createNode(
+                "decomposeMatrix", name=f"decomposeMatrix{i}"
+            )
+            uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
+            decomposeMatrix_node.outputTranslate.connect(pin_jnt.translate)
+            decomposeMatrix_node.outputRotate.connect(pin_jnt.rotate)
+            decomposeMatrix_node.outputScale.connect(pin_jnt.scale)
+            # 添加列表
             pin_jnt_list.append(pin_jnt)
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
