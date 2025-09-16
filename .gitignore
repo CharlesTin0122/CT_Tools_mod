@@ -227,3 +227,4 @@ __marimo__/
 # Built Visual Studio Code Extensions
 *.vsix
 .gitignore
+CODEBUDDY.md
