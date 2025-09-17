@@ -453,28 +453,26 @@ class RibbonCreator(QtWidgets.QDialog):
             if self.is_ring_plane:
                 v_pose = i / float(pin_num)
             # 创建 uvPin 节点
-            ctrl_uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
+            uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             # 创建pin骨骼
-            ctrl_pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
+            pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
             # 设置和连接节点属性
-            ctrl_uvPin_node.coordinate[0].coordinateU.set(0.5)
-            ctrl_uvPin_node.coordinate[0].coordinateV.set(v_pose)
+            uvPin_node.coordinate[0].coordinateU.set(0.5)
+            uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
-            nurbs_shape.worldSpace[0].connect(ctrl_uvPin_node.deformedGeometry)
+            nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
             # 连接骨骼变换，替换以下命令
             # uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
-            ctrl_decomposeMatrix_node = pm.createNode(
+            decomposeMatrix_node = pm.createNode(
                 "decomposeMatrix", name=f"decomposeMatrix{i}"
             )
-            ctrl_uvPin_node.outputMatrix[0].connect(
-                ctrl_decomposeMatrix_node.inputMatrix
-            )
-            ctrl_decomposeMatrix_node.outputTranslate.connect(ctrl_pin_jnt.translate)
-            ctrl_decomposeMatrix_node.outputRotate.connect(ctrl_pin_jnt.rotate)
-            ctrl_decomposeMatrix_node.outputScale.connect(ctrl_pin_jnt.scale)
+            uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
+            decomposeMatrix_node.outputTranslate.connect(pin_jnt.translate)
+            decomposeMatrix_node.outputRotate.connect(pin_jnt.rotate)
+            decomposeMatrix_node.outputScale.connect(pin_jnt.scale)
 
             # 添加列表
-            pin_jnt_list.append(ctrl_pin_jnt)
+            pin_jnt_list.append(pin_jnt)
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
