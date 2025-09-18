@@ -4,16 +4,8 @@ import pymel.core.datatypes as dt
 
 
 # mGear Utiliyies
-def addNPO(objs=None, *args):
-    """Add a transform node as a neutral pose
-
-    Add a transform node as a parent and in the same pose of each of the
-    selected objects. This way neutralize the local transfromation
-    values.
-    NPO stands for "neutral position" terminology from the all mighty
-    Softimage ;)
-
-    """
+def addOffsetGroups(objs=None, *args):
+    """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零"""
     npoList = []
 
     if not objs:
@@ -22,16 +14,17 @@ def addNPO(objs=None, *args):
         objs = [objs]
     for obj in objs:
         oParent = obj.getParent()
-        oTra = pm.createNode("transform", n=obj.name() + "_npo", p=oParent, ss=True)
+        oTra = pm.createNode(
+            "transform", name=obj.name() + "_osg", parent=oParent, skipSelect=True
+        )
         oTra.setTransformation(obj.getMatrix())
         pm.parent(obj, oTra)
         npoList.append(oTra)
-
     return npoList
 
 
 def selectDeformers(*args):
-    """Select the deformers from the object skinCluster"""
+    """选择模型蒙皮受影响的骨骼"""
 
     oSel = pm.selected()[0]
     oColl = pm.skinCluster(oSel, query=True, influence=True)
@@ -39,92 +32,106 @@ def selectDeformers(*args):
 
 
 def replaceShape(source=None, targets=None, *args):
-    """Replace the shape of one object by another.
-
+    """将源对象的形节点替换目标对象的形节点.
     Args:
-        source (None, PyNode): Source object with the original shape.
-        targets (None, list of pyNode): Targets object to apply the
-            source shape.
-        *args: Maya's dummy
-
+        source (None, PyNode): 源节点
+        targets (None, list of pyNode): 目标节点或列表
+        *args: Maya 占位符
     Returns:
-
-        None: Return non if nothing is selected or the source and targets
-        are none
-
+        None
     """
+    # 验证参数
     if not source and not targets:
         oSel = pm.selected()
         if len(oSel) < 2:
             pm.displayWarning("At less 2 objects must be selected")
             return None
         else:
-            source = oSel[0]
-            targets = oSel[1:]
-
+            source = oSel[0]  # 第一个选择对象为源节点
+            targets = oSel[1:]  # 第二个和后面的为目标节点
+    # 遍历目标对象
     for target in targets:
+        # 复制一份源节点用于替换
         source2 = pm.duplicate(source)[0]
+        # 获取目标对象的形节点
         shape = target.getShapes()
+        # 用于储存目标对象形节点属性连接列表
         cnx = []
         if shape:
-            cnx = shape[0].listConnections(plugs=True, c=True)
+            # 列出连接的属性
+            # plugs参数：列出连接的节点和属性（Attribute('skinCluster3.outputGeometry[0]')），
+            # 不添加此参数只会列出连接的节点名称（  nt.SkinCluster('skinCluster3'),）
+            # connections：会返回一个配对列表。列表中的每一项元组，存储了所有连接的“来源”和“去向”。
+            # 格式为：(Attribute('mesh_bodyShape.inMesh'),Attribute('skinCluster3.outputGeometry[0]'))。
+            cnx = shape[0].listConnections(plugs=True, connections=True)
+            # c[1]为连接的源头（Attribute('skinCluster3.outputGeometry[0]')），
+            # c[0].shortName()提取出不带节点名的纯属性名（"inMesh"）,
+            # 因为我们断开连接之后要删除该形节点，所以我们只获取属性名即可重新连接新的形节点
             cnx = [[c[1], c[0].shortName()] for c in cnx]
-            # Disconnect the conexion before delete the old shape
+            # 断开连接
             for s in shape:
-                for c in s.listConnections(plugs=True, c=True):
+                for c in s.listConnections(plugs=True, connections=True):
                     pm.disconnectAttr(c[0])
+        # 删除目标对象的形节点
         pm.delete(shape)
-        pm.parent(source2.getShapes(), target, r=True, s=True)
-
+        # 将复制出来的源节点的形节点作为目标节点的子对象，
+        # relative保持相对变换，shape将一个形状节点“过继”给一个新的变换节点
+        pm.parent(source2.getShapes(), target, relative=True, shape=True)
+        # 重新连接属性
         for i, sh in enumerate(target.getShapes()):
             # Restore shapes connections
             for c in cnx:
                 pm.connectAttr(c[0], sh.attr(c[1]))
-            pm.rename(sh, target.name() + "_%s_Shape" % str(i))
-
+            pm.rename(sh, f"{target.name()}_{i}_shape")
+        # 删除复制出来的变换节点
         pm.delete(source2)
 
 
 def addBlendedJoint(
     oSel=None, compScale=True, blend=0.5, name=None, select=True, *args
 ):
-    """Create and gimmick blended joint
-
-    Create a joint that rotate 50% of the selected joint. This operation is
-    done using a pairBlend node.
+    """创建混合骨骼
+    在选中骨骼同层级创建一个混合骨骼他的旋转是选中骨骼的一半. 使用 pairBlend 节点.
 
     Args:
-        oSel (None or joint, optional): If None will use the selected joints.
-        compScale (bool, optional): Set the compScale option of the blended
-            joint. Default is True.
-        blend (float, optional): blend rotation value
-        name (None, optional): Name for the blended o_node
+        oSel (None or joint, optional): 如果未提供，使用选中骨骼.
+        compScale (bool, optional): 骨骼的segmentScaleCompensate属性. 默认为 True.
+        blend (float, optional): 旋转混合值
+        name (None, optional): 混合骨骼的名称
         *args: Maya's dummy
 
     Returns:
         list: blended joints list
 
     """
+    # 验证参数
     if not oSel:
         oSel = pm.selected()
     elif not isinstance(oSel, list):
         oSel = [oSel]
+    # 用于储存混合骨骼
     jnt_list = []
+    # 遍历所选骨骼
     for x in oSel:
+        # 获取骨骼父对象和混合骨骼名称
         if isinstance(x, pm.nodetypes.Joint):
             parent = x.getParent()
             if name:
                 bname = "blend_" + name
             else:
                 bname = "blend_" + x.name()
-
+            # 创建骨骼，添加到列表，设置半径，设置父对象
             jnt = pm.createNode("joint", n=bname, p=x)
             jnt_list.append(jnt)
             jnt.attr("radius").set(1.5)
             pm.parent(jnt, parent)
+            # 创建pairBlend节点
             o_node = pm.createNode("pairBlend")
+            # 设置节点旋转差值为四元数（Quaternion）
             o_node.attr("rotInterpolation").set(1)
+            # 设置节点混合权重
             pm.setAttr(o_node + ".weight", blend)
+            # 链接属性
             pm.connectAttr(x + ".translate", o_node + ".inTranslate1")
             pm.connectAttr(x + ".translate", o_node + ".inTranslate2")
             pm.connectAttr(x + ".rotate", o_node + ".inRotate1")
@@ -138,10 +145,10 @@ def addBlendedJoint(
             pm.connectAttr(o_node + ".outTranslateZ", jnt + ".translateZ")
 
             pm.connectAttr(x + ".scale", jnt + ".scale")
-
+            # 设置混合骨骼颜色为黄色
             jnt.attr("overrideEnabled").set(1)
             jnt.attr("overrideColor").set(17)
-
+            # 设置混合骨骼 分段缩放补偿
             jnt.attr("segmentScaleCompensate").set(compScale)
 
             try:
@@ -165,32 +172,38 @@ def addBlendedJoint(
 
 
 def addSupportJoint(oSel=None, select=True, *args):
-    """Add an extra joint to the blended joint.
-
-    This is meant to be use with SDK for game style deformation.
-
+    """为混合骨骼添加修形骨骼.
+    修形骨骼用于蒙皮到模型，被RBF算法或驱动关键帧驱动用来修形
     Args:
-        oSel (None or blended joint, optional): If None will use the current
-            selection.
+        oSel (None or blended joint, optional): 混合骨骼如果未提供则使用选中骨骼.
         *args: Mays's dummy
 
     Returns:
         list: blended joints list
 
     """
+    # 验证参数
     if not oSel:
         oSel = pm.selected()
     elif not isinstance(oSel, list):
         oSel = [oSel]
-
+    # 列表用于添加修形骨骼
     jnt_list = []
+    # 遍历所选对象
     for x in oSel:
         if x.name().split("_")[0] == "blend":
+            # 获取所有子骨骼
             children = [
-                item for item in pm.selected()[0].listRelatives(ad=True, type="joint")
+                item
+                for item in pm.selected()[0].listRelatives(
+                    allDescendents=True, type="joint"
+                )
             ]
+            # 获取子骨骼数量
             i = len(children)
+            # 获取修形骨骼唯一命名
             name = x.name().replace("blend", "blendSupport_%s" % str(i))
+            # 创建骨骼，添加列表，设置属性
             jnt = pm.createNode("joint", n=name, p=x)
             jnt_list.append(jnt)
             jnt.attr("radius").set(1.5)
