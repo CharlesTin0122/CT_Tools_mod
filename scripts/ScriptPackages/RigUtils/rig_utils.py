@@ -3,6 +3,221 @@ import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
 
 
+# mGear Utiliyies
+def addNPO(objs=None, *args):
+    """Add a transform node as a neutral pose
+
+    Add a transform node as a parent and in the same pose of each of the
+    selected objects. This way neutralize the local transfromation
+    values.
+    NPO stands for "neutral position" terminology from the all mighty
+    Softimage ;)
+
+    """
+    npoList = []
+
+    if not objs:
+        objs = pm.selected()
+    if not isinstance(objs, list):
+        objs = [objs]
+    for obj in objs:
+        oParent = obj.getParent()
+        oTra = pm.createNode("transform", n=obj.name() + "_npo", p=oParent, ss=True)
+        oTra.setTransformation(obj.getMatrix())
+        pm.parent(obj, oTra)
+        npoList.append(oTra)
+
+    return npoList
+
+
+def selectDeformers(*args):
+    """Select the deformers from the object skinCluster"""
+
+    oSel = pm.selected()[0]
+    oColl = pm.skinCluster(oSel, query=True, influence=True)
+    pm.select(oColl)
+
+
+def replaceShape(source=None, targets=None, *args):
+    """Replace the shape of one object by another.
+
+    Args:
+        source (None, PyNode): Source object with the original shape.
+        targets (None, list of pyNode): Targets object to apply the
+            source shape.
+        *args: Maya's dummy
+
+    Returns:
+
+        None: Return non if nothing is selected or the source and targets
+        are none
+
+    """
+    if not source and not targets:
+        oSel = pm.selected()
+        if len(oSel) < 2:
+            pm.displayWarning("At less 2 objects must be selected")
+            return None
+        else:
+            source = oSel[0]
+            targets = oSel[1:]
+
+    for target in targets:
+        source2 = pm.duplicate(source)[0]
+        shape = target.getShapes()
+        cnx = []
+        if shape:
+            cnx = shape[0].listConnections(plugs=True, c=True)
+            cnx = [[c[1], c[0].shortName()] for c in cnx]
+            # Disconnect the conexion before delete the old shape
+            for s in shape:
+                for c in s.listConnections(plugs=True, c=True):
+                    pm.disconnectAttr(c[0])
+        pm.delete(shape)
+        pm.parent(source2.getShapes(), target, r=True, s=True)
+
+        for i, sh in enumerate(target.getShapes()):
+            # Restore shapes connections
+            for c in cnx:
+                pm.connectAttr(c[0], sh.attr(c[1]))
+            pm.rename(sh, target.name() + "_%s_Shape" % str(i))
+
+        pm.delete(source2)
+
+
+def addBlendedJoint(
+    oSel=None, compScale=True, blend=0.5, name=None, select=True, *args
+):
+    """Create and gimmick blended joint
+
+    Create a joint that rotate 50% of the selected joint. This operation is
+    done using a pairBlend node.
+
+    Args:
+        oSel (None or joint, optional): If None will use the selected joints.
+        compScale (bool, optional): Set the compScale option of the blended
+            joint. Default is True.
+        blend (float, optional): blend rotation value
+        name (None, optional): Name for the blended o_node
+        *args: Maya's dummy
+
+    Returns:
+        list: blended joints list
+
+    """
+    if not oSel:
+        oSel = pm.selected()
+    elif not isinstance(oSel, list):
+        oSel = [oSel]
+    jnt_list = []
+    for x in oSel:
+        if isinstance(x, pm.nodetypes.Joint):
+            parent = x.getParent()
+            if name:
+                bname = "blend_" + name
+            else:
+                bname = "blend_" + x.name()
+
+            jnt = pm.createNode("joint", n=bname, p=x)
+            jnt_list.append(jnt)
+            jnt.attr("radius").set(1.5)
+            pm.parent(jnt, parent)
+            o_node = pm.createNode("pairBlend")
+            o_node.attr("rotInterpolation").set(1)
+            pm.setAttr(o_node + ".weight", blend)
+            pm.connectAttr(x + ".translate", o_node + ".inTranslate1")
+            pm.connectAttr(x + ".translate", o_node + ".inTranslate2")
+            pm.connectAttr(x + ".rotate", o_node + ".inRotate1")
+
+            pm.connectAttr(o_node + ".outRotateX", jnt + ".rotateX")
+            pm.connectAttr(o_node + ".outRotateY", jnt + ".rotateY")
+            pm.connectAttr(o_node + ".outRotateZ", jnt + ".rotateZ")
+
+            pm.connectAttr(o_node + ".outTranslateX", jnt + ".translateX")
+            pm.connectAttr(o_node + ".outTranslateY", jnt + ".translateY")
+            pm.connectAttr(o_node + ".outTranslateZ", jnt + ".translateZ")
+
+            pm.connectAttr(x + ".scale", jnt + ".scale")
+
+            jnt.attr("overrideEnabled").set(1)
+            jnt.attr("overrideColor").set(17)
+
+            jnt.attr("segmentScaleCompensate").set(compScale)
+
+            try:
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            except TypeError:
+                pm.sets(n="rig_deformers_grp")
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            pm.sets(defSet, add=jnt)
+        else:
+            pm.displayWarning(
+                "Blended Joint can't be added to: %s. Because "
+                "is not ot type Joint" % x.name()
+            )
+
+    if jnt_list and select:
+        pm.select(jnt_list)
+
+    return jnt_list
+
+
+def addSupportJoint(oSel=None, select=True, *args):
+    """Add an extra joint to the blended joint.
+
+    This is meant to be use with SDK for game style deformation.
+
+    Args:
+        oSel (None or blended joint, optional): If None will use the current
+            selection.
+        *args: Mays's dummy
+
+    Returns:
+        list: blended joints list
+
+    """
+    if not oSel:
+        oSel = pm.selected()
+    elif not isinstance(oSel, list):
+        oSel = [oSel]
+
+    jnt_list = []
+    for x in oSel:
+        if x.name().split("_")[0] == "blend":
+            children = [
+                item for item in pm.selected()[0].listRelatives(ad=True, type="joint")
+            ]
+            i = len(children)
+            name = x.name().replace("blend", "blendSupport_%s" % str(i))
+            jnt = pm.createNode("joint", n=name, p=x)
+            jnt_list.append(jnt)
+            jnt.attr("radius").set(1.5)
+            jnt.attr("overrideEnabled").set(1)
+            jnt.attr("overrideColor").set(17)
+            try:
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            except pm.MayaNodeError:
+                pm.sets(n="rig_deformers_grp")
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            pm.sets(defSet, add=jnt)
+
+        else:
+            pm.displayWarning(
+                "Support Joint can't be added to: %s. Because "
+                "is not blend joint" % x.name()
+            )
+
+    if jnt_list and select:
+        pm.select(jnt_list)
+
+    return jnt_list
+
+
+# Rig Utilities
 def match_bind_jnt_to_ikfk_jnt(
     limb_setting_ctrl: nt.Transform,
     bind_jnt_list: list[nt.Joint],
@@ -231,24 +446,3 @@ def limb_stretch(
 
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[0].upper()}"))
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[1].upper()}"))
-
-
-if __name__ == "__main__":
-    objs = pm.selected()
-    if len(objs) == 5:
-        root_controller = [0]
-        ik_controller = objs[1]
-        root_jnt = objs[2]
-        mid_jnt = objs[3]
-        end_jnt = objs[4]
-
-        limb_stretch(
-            root_ctrl=objs[0],
-            ik_ctrl=objs[1],
-            ik_jnt_01=objs[2],
-            ik_jnt_02=objs[3],
-            ik_jnt_03=objs[4],
-            stretch_axis="x",
-        )
-    else:
-        pm.warning("请按顺序选择4个物体：IK控制器, 根关节, 中间关节, 末端关节。")

@@ -352,7 +352,7 @@ class RibbonCreator(QtWidgets.QDialog):
             lengthRatio=length_ratio,  # 长宽比
             degree=3,  # 度
             u=1,  # u方向段数
-            v=segment_count,  # V方向段数
+            v=segment_count - 1,  # V方向段数
             constructionHistory=0,  # 是否保留历史
         )
         pm.select(clear=True)
@@ -469,7 +469,6 @@ class RibbonCreator(QtWidgets.QDialog):
             uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
             decomposeMatrix_node.outputTranslate.connect(pin_jnt.translate)
             decomposeMatrix_node.outputRotate.connect(pin_jnt.rotate)
-            decomposeMatrix_node.outputScale.connect(pin_jnt.scale)
 
             # 添加列表
             pin_jnt_list.append(pin_jnt)
