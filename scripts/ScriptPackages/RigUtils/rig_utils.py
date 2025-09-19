@@ -6,7 +6,7 @@ import pymel.core.datatypes as dt
 # mGear Utiliyies
 def addOffsetGroups(objs=None, *args):
     """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零"""
-    npoList = []
+    osgList = []
 
     if not objs:
         objs = pm.selected()
@@ -14,13 +14,13 @@ def addOffsetGroups(objs=None, *args):
         objs = [objs]
     for obj in objs:
         oParent = obj.getParent()
-        oTra = pm.createNode(
+        osg = pm.createNode(
             "transform", name=obj.name() + "_osg", parent=oParent, skipSelect=True
         )
-        oTra.setTransformation(obj.getMatrix())
-        pm.parent(obj, oTra)
-        npoList.append(oTra)
-    return npoList
+        osg.setTransformation(obj.getMatrix())
+        pm.parent(obj, osg)
+        osgList.append(osg)
+    return osgList
 
 
 def selectDeformers(*args):
@@ -470,5 +470,41 @@ def limb_stretch(
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[1].upper()}"))
 
 
-def reverse_foot():
-    pass
+def reverse_foot(
+    foot_ik_ctrl: nt.Transform,
+    toe_ik_ctrl: nt.Transform,
+    foot_ik_handle: nt.IkHandle,
+    ball_ik_handle: nt.IkHandle,
+    toe_ik_handle: nt.IkHandle,
+    heel_rev_ctrl: nt.Transform,
+    tip_rev_ctrl: nt.Transform,
+    out_rev_ctrl: nt.Transform,
+    in_rev_ctrl: nt.Transform,
+    ball_rev_ctrl: nt.Transform,
+):
+    foot_ctrls = [
+        toe_ik_ctrl,
+        heel_rev_ctrl,
+        tip_rev_ctrl,
+        out_rev_ctrl,
+        in_rev_ctrl,
+        ball_rev_ctrl,
+    ]
+    (
+        toe_ik_ctrl_osg,
+        heel_ctrl_osg,
+        tip_ctrl_osg,
+        out_ctrl_osg,
+        in_ctrl_osg,
+        ball_ctrl_osg,
+    ) = addOffsetGroups(foot_ctrls)
+    pm.parent(heel_ctrl_osg, foot_ik_ctrl)
+    pm.parent(tip_ctrl_osg, heel_rev_ctrl)
+    pm.parent(out_ctrl_osg, tip_rev_ctrl)
+    pm.parent(in_ctrl_osg, out_rev_ctrl)
+    pm.parent(toe_ik_ctrl_osg, in_rev_ctrl)
+    pm.parent(ball_ctrl_osg, in_rev_ctrl)
+
+    pm.parent(toe_ik_handle, toe_ik_ctrl)
+    pm.parent(foot_ik_handle, ball_ik_handle, ball_rev_ctrl)
+    pm.select(clear=True)

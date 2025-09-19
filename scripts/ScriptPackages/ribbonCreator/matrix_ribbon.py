@@ -440,6 +440,16 @@ class RibbonCreator(QtWidgets.QDialog):
             raise ValueError("pin_num must be a positive integer.")
         if not isinstance(ctrl_num, int) or ctrl_num <= 0:
             raise ValueError("ctrl_num must be a positive integer.")
+        # 删除历史冻结变换
+        pm.delete(nurbs_plane, constructionHistory=True)
+        pm.makeIdentity(
+            nurbs_plane,
+            apply=True,
+            translate=True,
+            rotate=True,
+            scale=True,
+            normal=False,
+        )
         # 获取nurbs plane 的形状节点
         nurbs_shape = nurbs_plane.getShape()
         # 创建pin骨骼
