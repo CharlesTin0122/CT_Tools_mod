@@ -236,6 +236,8 @@ def match_bind_jnt_to_ikfk_jnt(
     bind_jnt_list: list[nt.Joint],
     fk_jnt_list: list[nt.Joint],
     ik_jnt_list: list[nt.Joint],
+    fk_ctrl_grp: nt.Transform,
+    ik_ctrl_grp: nt.Transform,
 ):
     """轻量级IKFK骨骼约束主骨骼，使用blendColor节点代替ParentConstrain节点，ikfkSwitch属性：0为IK模式，1为FK模式
 
@@ -244,6 +246,8 @@ def match_bind_jnt_to_ikfk_jnt(
         bind_jnt_list (list[nt.Joint]): 主骨骼列表
         fk_jnt_list (list[nt.Joint]): FK骨骼列表
         ik_jnt_list (list[nt.Joint]): IK骨骼列表
+        fk_ctrl_grp: nt.Transform,:FK控制器组
+        ik_ctrl_grp: nt.Transform:IK控制器组
     """
     # 添加属性
     if not limb_setting_ctrl.hasAttr("ikfkSwitch"):
@@ -276,6 +280,11 @@ def match_bind_jnt_to_ikfk_jnt(
         ik_jnt_list[i].scale.connect(scale_blender_node.color2)
         limb_setting_ctrl.ikfkSwitch.connect(scale_blender_node.blender)
         scale_blender_node.output.connect(bind_jnt_list[i].scale)
+        # 连接控制器显示
+        limb_setting_ctrl.ikfkSwitch.connect(fk_ctrl_grp.visibility)
+        reverse_visibility_node = pm.createNode("reverse", name="reverse_visibility")
+        limb_setting_ctrl.ikfkSwitch.connect(reverse_visibility_node.inputX)
+        reverse_visibility_node.outputX.connect(ik_ctrl_grp.visibility)
 
 
 def spline_ik_stretch(
@@ -459,3 +468,7 @@ def limb_stretch(
 
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[0].upper()}"))
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[1].upper()}"))
+
+
+def reverse_foot():
+    pass

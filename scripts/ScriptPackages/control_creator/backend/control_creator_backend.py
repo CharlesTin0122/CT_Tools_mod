@@ -362,32 +362,59 @@ def _get_controller_info_from_node(node):
     return temp_info if temp_info.get("curve_transform") else None
 
 
-def run_control_creator_example():
-    """示例：创建并调整控制器"""
-    json_to_load = "circle.json"
-    loaded_data = read_json_data(json_to_load)
-    if not loaded_data:
-        pc.warning(f"无法加载 {json_to_load}，请确保文件存在。")
-        return
-    controller_info = create_curve_from_data(
-        loaded_data, base_name="myNewCtrl", new_color_index=17
-    )
-    if not controller_info:
-        pc.error("创建控制器失败。")
-        return
-    adjust_controller_size(controller_info, 1.5)
-    try:
-        target_joint = pc.PyNode("joint1")
-        if pc.objExists(target_joint) and isinstance(target_joint, pc.nodetypes.Joint):
-            match_to_joint(controller_info, target_joint)
+def replaceShape(source=None, targets=None, *args):
+    """将源对象的形节点替换目标对象的形节点.
+    Args:
+        source (None, PyNode): 源节点
+        targets (None, list of pyNode): 目标节点或列表
+        *args: Maya 占位符
+    Returns:
+        None
+    """
+    # 验证参数
+    if not source and not targets:
+        oSel = pc.selected()
+        if len(oSel) < 2:
+            pc.displayWarning("At less 2 objects must be selected")
+            return None
         else:
-            pc.displayInfo("未找到 'joint1'，跳过匹配。")
-    except pc.MayaNodeError:
-        pc.displayInfo("未找到 'joint1'，跳过匹配。")
-    orient_controller_cvs(controller_info, [90, 0, 0])
-    pc.select(controller_info["offset_group"])
-    pc.displayInfo(f"控制器工具示例完成: {controller_info['offset_group'].name()}")
+            source = oSel[0]  # 第一个选择对象为源节点
+            targets = oSel[1:]  # 第二个和后面的为目标节点
 
-
-if __name__ == "__main__":
-    run_control_creator_example()
+    with pc.UndoChunk(name="ReplaceShape"):
+        # 遍历目标对象
+        for target in targets:
+            # 复制一份源节点用于替换
+            source2 = pc.duplicate(source)[0]
+            # 获取目标对象的形节点
+            shape = target.getShapes()
+            # 用于储存目标对象形节点属性连接列表
+            cnx = []
+            if shape:
+                # 列出连接的属性
+                # plugs参数：列出连接的节点和属性（Attribute('skinCluster3.outputGeometry[0]')），
+                # 不添加此参数只会列出连接的节点名称（  nt.SkinCluster('skinCluster3'),）
+                # connections：会返回一个配对列表。列表中的每一项元组，存储了所有连接的“来源”和“去向”。
+                # 格式为：(Attribute('mesh_bodyShape.inMesh'),Attribute('skinCluster3.outputGeometry[0]'))。
+                cnx = shape[0].listConnections(plugs=True, connections=True)
+                # c[1]为连接的源头（Attribute('skinCluster3.outputGeometry[0]')），
+                # c[0].shortName()提取出不带节点名的纯属性名（"inMesh"）,
+                # 因为我们断开连接之后要删除该形节点，所以我们只获取属性名即可重新连接新的形节点
+                cnx = [[c[1], c[0].shortName()] for c in cnx]
+                # 断开连接
+                for s in shape:
+                    for c in s.listConnections(plugs=True, connections=True):
+                        pc.disconnectAttr(c[0])
+            # 删除目标对象的形节点
+            pc.delete(shape)
+            # 将复制出来的源节点的形节点作为目标节点的子对象，
+            # relative保持相对变换，shape将一个形状节点“过继”给一个新的变换节点
+            pc.parent(source2.getShapes(), target, relative=True, shape=True)
+            # 重新连接属性
+            for i, sh in enumerate(target.getShapes()):
+                # Restore shapes connections
+                for c in cnx:
+                    pc.connectAttr(c[0], sh.attr(c[1]))
+                pc.rename(sh, f"{target.name()}_{i}_shape")
+            # 删除复制出来的变换节点
+            pc.delete(source2)

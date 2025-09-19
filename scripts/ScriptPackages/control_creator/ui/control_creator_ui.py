@@ -12,6 +12,7 @@ from ..backend.control_creator_backend import (
     match_to_joint,
     orient_controller_cvs,
     save_controller_shape,
+    replaceShape,
 )
 
 _ui_instance = None
@@ -162,10 +163,13 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
         post_process_button.setToolTip(
             "对选中的控制器（或其 offset group）应用大小和旋转设置"
         )
+        replace_shape_btn = QtWidgets.QPushButton("替换控制器形状(Replace Shape)")
+        replace_shape_btn.clicked.connect(self.replace_shape)
         self.main_layout.addWidget(self.match_to_selection_cb)
         self.main_layout.addWidget(self.hierarchy_cb)
         self.main_layout.addWidget(create_button)
         self.main_layout.addWidget(post_process_button)
+        self.main_layout.addWidget(replace_shape_btn)
 
     def _build_save_shape_frame(self):
         """构建保存控制器形状区域"""
@@ -486,6 +490,9 @@ class ControlCreatorUI(QtWidgets.QMainWindow):
             self.findChild(QtWidgets.QDoubleSpinBox, "rotate_z_field").setValue(0.0)
         finally:
             pc.undoInfo(closeChunk=True)
+
+    def replace_shape(self):
+        replaceShape()
 
     def save_controller_shape_cmd(self):
         """保存选中的控制器形状"""
