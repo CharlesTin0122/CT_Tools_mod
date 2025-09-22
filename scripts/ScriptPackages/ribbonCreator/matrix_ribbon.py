@@ -454,6 +454,7 @@ class RibbonCreator(QtWidgets.QDialog):
         nurbs_shape = nurbs_plane.getShape()
         # 创建pin骨骼
         pin_jnt_list = []
+        pin_osg_list = []
         for i in range(pin_num):
             # 根据pin_num计算位置比例，uvPin默认以百分比计算UV位置，并且防止除0
             # 要创建5个pin骨骼，第0个骨骼在v方向0位置，第1个骨骼在v方向1/4位置
@@ -466,22 +467,28 @@ class RibbonCreator(QtWidgets.QDialog):
             uvPin_node = pm.createNode("uvPin", name=f"{ribbon_name}_uvPin_{i}")
             # 创建pin骨骼
             pin_jnt = pm.joint(name=f"{ribbon_name}_pin_{i}", radius=1)
+            pin_osg = pm.createNode(
+                "transform", name=f"{ribbon_name}_pin_{i}_osg", skipSelect=True
+            )
+            pm.parent(pin_jnt, pin_osg)
             # 设置和连接节点属性
             uvPin_node.coordinate[0].coordinateU.set(0.5)
             uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
             nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
-            # 连接骨骼变换，替换以下命令
-            # uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
-            decomposeMatrix_node = pm.createNode(
-                "decomposeMatrix", name=f"decomposeMatrix{i}"
-            )
-            uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
-            decomposeMatrix_node.outputTranslate.connect(pin_jnt.translate)
-            decomposeMatrix_node.outputRotate.connect(pin_jnt.rotate)
+            # 连接骨骼偏移父对象矩阵,因为我们不会将pin骨骼直接用于蒙皮(游戏中骨骼不支持偏移父对象矩阵)
+            uvPin_node.outputMatrix[0].connect(pin_osg.offsetParentMatrix)
+            # 如果要将pin骨骼直接用于蒙皮,使用一下代码代替
+            # decomposeMatrix_node = pm.createNode(
+            #     "decomposeMatrix", name=f"decomposeMatrix{i}"
+            # )
+            # uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
+            # decomposeMatrix_node.outputTranslate.connect(pin_osg.translate)
+            # decomposeMatrix_node.outputRotate.connect(pin_osg.rotate)
 
             # 添加列表
             pin_jnt_list.append(pin_jnt)
+            pin_osg_list.append(pin_osg)
         # 创建控制骨骼和控制器
         ctrl_jnt_list = []
         ctrl_grp_list = []
@@ -502,8 +509,6 @@ class RibbonCreator(QtWidgets.QDialog):
             ctrl_uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
             nurbs_shape.worldSpace[0].connect(ctrl_uvPin_node.deformedGeometry)
-            # 连接骨骼变换，替换以下命令
-            # uvPin_node.outputMatrix[0].connect(pin_jnt.offsetParentMatrix)
             ctrl_decomposeMatrix_node = pm.createNode(
                 "decomposeMatrix", name=f"ctrl_decomposeMatrix{i}"
             )
@@ -539,7 +544,7 @@ class RibbonCreator(QtWidgets.QDialog):
         # 控制骨骼蒙皮到nur平面
         pm.skinCluster(nurbs_plane, ctrl_jnt_list)
         # 打组，整理场景
-        pin_jnt_grp = pm.group(pin_jnt_list, name=f"{ribbon_name}_pin_Jnt_grp")
+        pin_jnt_grp = pm.group(pin_osg_list, name=f"{ribbon_name}_pin_Jnt_grp")
         ctrl_jnt_grp = pm.group(ctrl_jnt_list, name=f"{ribbon_name}_ctrl_Jnt_grp")
 
         if create_ctrl:

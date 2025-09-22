@@ -5,7 +5,14 @@ import pymel.core.datatypes as dt
 
 # mGear Utiliyies
 def addOffsetGroups(objs=None, *args):
-    """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零"""
+    """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零
+
+    Args:
+        objs (list, optional): 要添加偏移组的对象列表.
+
+    Returns:
+        list: 偏移组列表
+    """
     osgList = []
 
     if not objs:
@@ -17,7 +24,8 @@ def addOffsetGroups(objs=None, *args):
         osg = pm.createNode(
             "transform", name=obj.name() + "_osg", parent=oParent, skipSelect=True
         )
-        osg.setTransformation(obj.getMatrix())
+        pm.matchTransform(osg, obj)
+        # osg.setTransformation(obj.getMatrix())
         pm.parent(obj, osg)
         osgList.append(osg)
     return osgList
@@ -32,7 +40,7 @@ def selectDeformers(*args):
 
 
 def replaceShape(source=None, targets=None, *args):
-    """将源对象的形节点替换目标对象的形节点.
+    """将源对象的形节点替换目标对象的形节点,常用语替换控制器形状.
     Args:
         source (None, PyNode): 源节点
         targets (None, list of pyNode): 目标节点或列表
@@ -228,6 +236,38 @@ def addSupportJoint(oSel=None, select=True, *args):
         pm.select(jnt_list)
 
     return jnt_list
+
+
+def transform_to_offsetParentMatrix(obj: nt.Transform):
+    """将对象变换转移到偏移父矩阵,变换置零
+
+    Args:
+        obj (nt.Transform): 对象
+    """
+    # 获取对象局部矩阵
+    obj_matrix = obj.getMatrix(objectSpace=True)
+    # 获取对象偏移父矩阵
+    obj_offsetParentMatrix = obj.offsetParentMatrix.get()
+    # 设置对象偏移父矩阵为 局部矩阵 * 偏移父矩阵,顺序不能反
+    obj.offsetParentMatrix.set(obj_matrix * obj_offsetParentMatrix)
+    # 设置对象局部矩阵为单位矩阵,变换置零
+    obj.setMatrix(dt.Matrix())
+
+
+def offsetParentMatrix_to_transform(obj: nt.Transform):
+    """将对象偏移父矩阵转移到变换,偏移父矩阵置零
+
+    Args:
+        obj (nt.Transform): 对象
+    """
+    # 获取对象偏移父矩阵
+    obj_offsetParentMatrix = obj.offsetParentMatrix.get()
+    # 获取对象局部矩阵
+    obj_matrix = obj.getMatrix(objectSpace=True)
+    # 设置对象矩阵为 局部矩阵 * 偏移父矩阵 ,顺序不能反
+    obj.setMatrix(obj_matrix * obj_offsetParentMatrix)
+    # 设置对象偏移父矩阵为单位矩阵,变换置零
+    obj.offsetParentMatrix.set(dt.Matrix())
 
 
 # Rig Utilities
@@ -482,6 +522,21 @@ def reverse_foot(
     in_rev_ctrl: nt.Transform,
     ball_rev_ctrl: nt.Transform,
 ):
+    """设置反转脚
+
+    Args:
+        foot_ik_ctrl (nt.Transform): 脚部IK控制器,控制脚部变换
+        toe_ik_ctrl (nt.Transform): 脚趾IK控制器,控制脚趾的旋转
+        foot_ik_handle (nt.IkHandle): 脚部IK句柄
+        ball_ik_handle (nt.IkHandle): 脚趾根IK句柄
+        toe_ik_handle (nt.IkHandle): 脚尖IK句柄
+        heel_rev_ctrl (nt.Transform): 脚跟反转控制器
+        tip_rev_ctrl (nt.Transform): 脚尖反转控制器
+        out_rev_ctrl (nt.Transform): 脚外侧反转控制器
+        in_rev_ctrl (nt.Transform): 脚内侧反转控制器
+        ball_rev_ctrl (nt.Transform): 脚趾根反转控制器
+    """
+    # 创建控制器列表
     foot_ctrls = [
         toe_ik_ctrl,
         heel_rev_ctrl,
@@ -490,6 +545,7 @@ def reverse_foot(
         in_rev_ctrl,
         ball_rev_ctrl,
     ]
+    # 为控制器创建偏移组
     (
         toe_ik_ctrl_osg,
         heel_ctrl_osg,
@@ -498,6 +554,7 @@ def reverse_foot(
         in_ctrl_osg,
         ball_ctrl_osg,
     ) = addOffsetGroups(foot_ctrls)
+    # 创建反转脚
     pm.parent(heel_ctrl_osg, foot_ik_ctrl)
     pm.parent(tip_ctrl_osg, heel_rev_ctrl)
     pm.parent(out_ctrl_osg, tip_rev_ctrl)
