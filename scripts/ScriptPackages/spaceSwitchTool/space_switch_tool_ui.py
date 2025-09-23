@@ -93,6 +93,7 @@ class CreateSpaces(QtWidgets.QWidget):
         self.clear_info_btn = QtWidgets.QPushButton("Clear Info")
 
         self.add_space_btn = QtWidgets.QPushButton("Add Spases")
+        self.add_space_btn.setStyleSheet("background-color: blue;")
 
         self.spaces_area = QtWidgets.QScrollArea()
         self.spaces_area.setWidgetResizable(True)
@@ -104,6 +105,7 @@ class CreateSpaces(QtWidgets.QWidget):
         self.clear_spaces_btn = QtWidgets.QPushButton("Clear Spaces")
 
         self.generate_spaces_btn = QtWidgets.QPushButton("Generate Spaces")
+        self.generate_spaces_btn.setStyleSheet("background-color: blue;")
 
     def create_layout(self):
         target_node_layout = QtWidgets.QHBoxLayout()
@@ -253,7 +255,7 @@ class SwitchSpases(QtWidgets.QWidget):
         self.spaces_list = QtWidgets.QListWidget()
         self.spaces_list.setSelectionMode(QtWidgets.QListWidget.SingleSelection)
         self.switch_space_btn = QtWidgets.QPushButton("Switch_Space")
-
+        self.switch_space_btn.setStyleSheet("background-color: blue;")
         self.start_frame_label = QtWidgets.QLabel("Start Frame:")
         self.start_frame_spin = QtWidgets.QSpinBox()
         self.start_frame_spin.setFixedWidth(60)
@@ -267,6 +269,7 @@ class SwitchSpases(QtWidgets.QWidget):
         self.end_frame_spin.setMaximum(10000)
         self.end_frame_spin.setSingleStep(1)
         self.bake_space_btn = QtWidgets.QPushButton("Bake_Space")
+        self.bake_space_btn.setStyleSheet("background-color: blue;")
 
     def create_layout(self):
         target_node_layout = QtWidgets.QHBoxLayout()
@@ -348,6 +351,7 @@ class SwitchSpases(QtWidgets.QWidget):
         self.target_node_line.clear()
         self.group_node_line.clear()
         self.attribute_line.clear()
+        self.spaces_list.clear()
 
     @QtCore.Slot()
     def on_load_spaces_btn_clicked(self):
