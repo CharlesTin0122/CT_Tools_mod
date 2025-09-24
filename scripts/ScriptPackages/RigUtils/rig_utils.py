@@ -533,6 +533,7 @@ def reverse_foot(
     ball_rev_ctrl: nt.Transform,
 ):
     """设置反转脚
+    TODO:设置脚掌Pivot，将其完善为一个插件，包含界面，先摆放locater位置再生成反转脚
 
     Args:
         foot_ik_ctrl (nt.Transform): 脚部IK控制器,控制脚部变换
