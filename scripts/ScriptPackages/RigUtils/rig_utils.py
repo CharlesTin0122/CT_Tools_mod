@@ -238,36 +238,46 @@ def addSupportJoint(oSel=None, select=True, *args):
     return jnt_list
 
 
-def transform_to_offsetParentMatrix(obj: nt.Transform):
+def transform_to_offsetParentMatrix(objs=None):
     """将对象变换转移到偏移父矩阵,变换置零
 
     Args:
-        obj (nt.Transform): 对象
+        objs (nt.Transform): 对象列表
     """
-    # 获取对象局部矩阵
-    obj_matrix = obj.getMatrix(objectSpace=True)
-    # 获取对象偏移父矩阵
-    obj_offsetParentMatrix = obj.offsetParentMatrix.get()
-    # 设置对象偏移父矩阵为 局部矩阵 * 偏移父矩阵,顺序不能反
-    obj.offsetParentMatrix.set(obj_matrix * obj_offsetParentMatrix)
-    # 设置对象局部矩阵为单位矩阵,变换置零
-    obj.setMatrix(dt.Matrix())
+    if not objs:
+        objs = pm.selected()
+    if not isinstance(objs, list):
+        objs = [objs]
+    for obj in objs:
+        # 获取对象局部矩阵
+        obj_matrix = obj.getMatrix(objectSpace=True)
+        # 获取对象偏移父矩阵
+        obj_offsetParentMatrix = obj.offsetParentMatrix.get()
+        # 设置对象偏移父矩阵为 局部矩阵 * 偏移父矩阵,顺序不能反
+        obj.offsetParentMatrix.set(obj_matrix * obj_offsetParentMatrix)
+        # 设置对象局部矩阵为单位矩阵,变换置零
+        obj.setMatrix(dt.Matrix())
 
 
-def offsetParentMatrix_to_transform(obj: nt.Transform):
+def offsetParentMatrix_to_transform(objs=None):
     """将对象偏移父矩阵转移到变换,偏移父矩阵置零
 
     Args:
-        obj (nt.Transform): 对象
+        objs (nt.Transform): 对象列表
     """
-    # 获取对象偏移父矩阵
-    obj_offsetParentMatrix = obj.offsetParentMatrix.get()
-    # 获取对象局部矩阵
-    obj_matrix = obj.getMatrix(objectSpace=True)
-    # 设置对象矩阵为 局部矩阵 * 偏移父矩阵 ,顺序不能反
-    obj.setMatrix(obj_matrix * obj_offsetParentMatrix)
-    # 设置对象偏移父矩阵为单位矩阵,变换置零
-    obj.offsetParentMatrix.set(dt.Matrix())
+    if not objs:
+        objs = pm.selected()
+    if not isinstance(objs, list):
+        objs = [objs]
+    for obj in objs:
+        # 获取对象偏移父矩阵
+        obj_offsetParentMatrix = obj.offsetParentMatrix.get()
+        # 获取对象局部矩阵
+        obj_matrix = obj.getMatrix(objectSpace=True)
+        # 设置对象矩阵为 局部矩阵 * 偏移父矩阵 ,顺序不能反
+        obj.setMatrix(obj_matrix * obj_offsetParentMatrix)
+        # 设置对象偏移父矩阵为单位矩阵,变换置零
+        obj.offsetParentMatrix.set(dt.Matrix())
 
 
 # Rig Utilities
