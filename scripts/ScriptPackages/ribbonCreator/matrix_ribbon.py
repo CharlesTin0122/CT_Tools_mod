@@ -472,6 +472,10 @@ class RibbonCreator(QtWidgets.QDialog):
             )
             pm.parent(pin_jnt, pin_osg)
             # 设置和连接节点属性
+            if self.is_flip_normal:
+                uvPin_node.coordinate[0].coordinateU.set(v_pose)
+                uvPin_node.coordinate[0].coordinateV.set(0.5)
+
             uvPin_node.coordinate[0].coordinateU.set(0.5)
             uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
