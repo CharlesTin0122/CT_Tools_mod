@@ -481,14 +481,14 @@ class RibbonCreator(QtWidgets.QDialog):
 
             nurbs_shape.worldSpace[0].connect(uvPin_node.deformedGeometry)
             # 连接骨骼偏移父对象矩阵,因为我们不会将pin骨骼直接用于蒙皮(游戏中骨骼不支持偏移父对象矩阵)
-            uvPin_node.outputMatrix[0].connect(pin_osg.offsetParentMatrix)
+            # uvPin_node.outputMatrix[0].connect(pin_osg.offsetParentMatrix)
             # 如果要将pin骨骼直接用于蒙皮,使用一下代码代替
-            # decomposeMatrix_node = pm.createNode(
-            #     "decomposeMatrix", name=f"decomposeMatrix{i}"
-            # )
-            # uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
-            # decomposeMatrix_node.outputTranslate.connect(pin_osg.translate)
-            # decomposeMatrix_node.outputRotate.connect(pin_osg.rotate)
+            decomposeMatrix_node = pm.createNode(
+                "decomposeMatrix", name=f"decomposeMatrix{i}"
+            )
+            uvPin_node.outputMatrix[0].connect(decomposeMatrix_node.inputMatrix)
+            decomposeMatrix_node.outputTranslate.connect(pin_osg.translate)
+            decomposeMatrix_node.outputRotate.connect(pin_osg.rotate)
 
             # 添加列表
             pin_jnt_list.append(pin_jnt)
@@ -509,6 +509,10 @@ class RibbonCreator(QtWidgets.QDialog):
             # 创建pin骨骼
             ctrl_pin_jnt = pm.joint(name=f"{ribbon_name}_ctrljnt_{i}", radius=3)
             # 设置和连接节点属性
+            if self.is_flip_normal:
+                ctrl_uvPin_node.coordinate[0].coordinateU.set(v_pose)
+                ctrl_uvPin_node.coordinate[0].coordinateV.set(0.5)
+
             ctrl_uvPin_node.coordinate[0].coordinateU.set(0.5)
             ctrl_uvPin_node.coordinate[0].coordinateV.set(v_pose)
 
