@@ -66,7 +66,7 @@ def replaceShape(source=None, targets=None, *args):
         # 用于储存目标对象形节点属性连接列表
         cnx = []
         if shape:
-            # 列出连接的属性
+            # 列出连接的属性，TODO：有空再次检查代码，貌似属性链接有问题
             # plugs参数：列出连接的节点和属性（Attribute('skinCluster3.outputGeometry[0]')），
             # 不添加此参数只会列出连接的节点名称（  nt.SkinCluster('skinCluster3'),）
             # connections：会返回一个配对列表。列表中的每一项元组，存储了所有连接的“来源”和“去向”。
@@ -701,3 +701,102 @@ def seamless_space_switch(
     pm.setKeyframe(target_node.attr(switch_attribute))
 
     print(f"空间已切换到索引 {new_space_index}，并已自动K帧。")
+
+
+def matrix_constraint(
+    source_obj=None,
+    target_obj=None,
+    maintainOffset=True,
+    translate=True,
+    rotate=True,
+    scale=True,
+    target_is_joint=False,
+):
+    """
+    矩阵约束.
+    Args:
+        source_obj (nt.Transform): 源对象.
+        target_obj (nt.Transform): 目标对象.
+        maintainOffset (bool): 是否保持偏移.
+        translate (bool): 是否约束位移.
+        rotate (bool): 是否约束旋转.
+        scale (bool): 是否约束缩放.
+        target_is_joint (bool): 目标对象是否为骨骼，如果是则移除jointOrient的影响.
+    Returns:
+        None
+    """
+    if not source_obj or not target_obj:
+        selection = pm.selected()
+        if len(selection) < 2:
+            pm.warning("请选择至少两个对象：第一个是源对象，第二个是目标对象。")
+            return None
+        source_obj = pm.selected()[0]
+        target_obj = pm.selected()[1]
+
+    with pm.UndoChunk():
+        # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
+        offset_matrix = dt.Matrix()
+        if maintainOffset:
+            target_world_matrix = target_obj.worldMatrix[0].get()
+            source_world_inverse_matrix = source_obj.worldInverseMatrix[0].get()
+            offset_matrix = target_world_matrix * source_world_inverse_matrix
+        node_sufix = f"{source_obj.name()}_to_{target_obj.name()}"
+        # 矩阵乘法
+        mult_matrix_node = pm.createNode("multMatrix", name=f"mult_matrix_{node_sufix}")
+        mult_matrix_node.matrixIn[0].set(offset_matrix)
+        source_obj.worldMatrix[0].connect(mult_matrix_node.matrixIn[1])
+        target_obj.parentInverseMatrix[0].connect(mult_matrix_node.matrixIn[2])
+        # 分解矩阵
+        decompose_matrix_node = pm.createNode(
+            "decomposeMatrix", name=f"decompose_matrix_{node_sufix}"
+        )
+        mult_matrix_node.matrixSum.connect(decompose_matrix_node.inputMatrix)
+        # 连接变换
+        if translate:
+            decompose_matrix_node.outputTranslate.connect(target_obj.translate)
+        if rotate:
+            # 如果目标对象是骨骼，需要移除jointOrient的影响
+            # jointOrient转化为四元数并取逆，被矩阵计算出的四元数相乘，来移除jointOrient的影响
+            if target_is_joint:
+                # 创建所需的四元数节点
+                eulerToQuat_node = pm.createNode(
+                    "eulerToQuat", name=f"eulerToQuat_{node_sufix}"
+                )
+                quatInvert_node = pm.createNode(
+                    "quatInvert", name=f"quatInvert_{node_sufix}"
+                )
+                quatProd_node = pm.createNode("quatProd", name=f"quatProd_{node_sufix}")
+                quatToEuler_node = pm.createNode(
+                    "quatToEuler", name=f"quatToEuler_{node_sufix}"
+                )
+                # 连接节点
+                target_obj.jointOrient.connect(eulerToQuat_node.inputRotate)
+                eulerToQuat_node.outputQuat.connect(quatInvert_node.inputQuat)
+                decompose_matrix_node.outputQuat.connect(quatProd_node.input1Quat)
+                quatInvert_node.outputQuat.connect(quatProd_node.input2Quat)
+                quatProd_node.outputQuat.connect(quatToEuler_node.inputQuat)
+                quatToEuler_node.outputRotate.connect(target_obj.rotate)
+            else:
+                decompose_matrix_node.outputRotate.connect(target_obj.rotate)
+        if scale:
+            decompose_matrix_node.outputScale.connect(target_obj.scale)
+        # 收尾
+        print(f"成功创建从 '{source_obj.name()}' 到 '{target_obj.name()}' 的矩阵约束。")
+
+
+def create_export_joints(source_jnts=None, sufix="exp"):
+    """为绑定创建游戏引擎用的蒙皮导出骨骼"""
+    if not source_jnts:
+        source_jnts = pm.selected(type="joint")
+    if not isinstance(source_jnts, list):
+        source_jnts = [source_jnts]
+
+    exp_jnt_list = []
+    for jnt in source_jnts:
+        pm.select(clear=True)
+        exp_jnt = pm.joint(name=f"{jnt.name()}_{sufix}")
+        pm.matchTransform(exp_jnt, jnt, position=True, rotation=True, scale=True)
+        pm.makeIdentity(exp_jnt, apply=True)
+        matrix_constraint(jnt, exp_jnt, maintainOffset=False, target_is_joint=True)
+        exp_jnt_list.append(exp_jnt)
+    return exp_jnt_list

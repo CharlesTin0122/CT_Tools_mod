@@ -45,6 +45,13 @@ class BatchConstrNearestObj(object):
                     w=200, h=150, bgc=(0.5, 0.5, 0.5)
                 ) as self.list2_ui:
                     pc.text("Obj List B:")
+                with pc.verticalLayout():
+                    self.rbg = pc.radioButtonGrp(
+                        label="constraints: ",
+                        labelArray4=("Parent", "Point", "Orient", "scale"),
+                        numberOfRadioButtons=4,
+                        select=0,
+                    )
                 with pc.columnLayout(adj=1):
                     pc.button(
                         label="Batch Constrain !!!", w=150, h=50, c=self.batch_constrain
@@ -93,10 +100,18 @@ class BatchConstrNearestObj(object):
 
             # 如果最近骨骼存在,同时骨骼没有被约束,父子约束到最近的骨骼
             if closest_obj:
-                pc.parentConstraint(obj, closest_obj, maintainOffset=True)  # 执行约束
+                selected = pc.radioButtonGrp(self.rbg, query=True, select=True)
+                print(selected)
+                if selected == 1:
+                    pc.parentConstraint(obj, closest_obj, maintainOffset=True)
+                elif selected == 2:
+                    pc.pointConstraint(obj, closest_obj, maintainOffset=True)
+                elif selected == 3:
+                    pc.orientConstraint(obj, closest_obj, maintainOffset=True)
+                elif selected == 4:
+                    pc.scaleConstraint(obj, closest_obj, maintainOffset=True)
                 constrain_list = f"{obj}->{closest_obj}"
                 self.constrain_list.append(constrain_list)
-        print(self.constrain_list)
         return self.constrain_list
 
 
