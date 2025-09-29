@@ -812,6 +812,19 @@ def connect_twist_swing(
     twist_axis: str = "Y",
     driven_is_joint=False,
 ):
+    """
+    将扭转和摆动驱动的矩阵连接到给定的对象。
+    扭转和摆动值用于驱动四元数在源对象的局部矩阵和目标对象的局部矩阵之间进行插值。
+        Args:
+            driver (nt.Transform): 用于插值的源对象.
+            driven (nt.Transform): 用于插值的目标对象.
+            twist (float): 扭转值 (0.0 to 1.0).
+            swing (float): 摆动值 (0.0 to 1.0).
+            twist_axis (str): 扭转轴向 (X, Y, or Z).
+            driven_is_joint (bool): 目标对象是否为骨骼
+        Returns:
+            None
+    """
     # 获取对象
     if not driver or not driven:
         selection = pm.selected()
