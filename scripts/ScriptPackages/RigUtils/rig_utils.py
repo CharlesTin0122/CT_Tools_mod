@@ -710,7 +710,7 @@ def matrix_constraint(
     translate=True,
     rotate=True,
     scale=True,
-    target_is_joint=False,
+    target_is_joint=True,
 ):
     """
     矩阵约束.
@@ -730,8 +730,7 @@ def matrix_constraint(
         if len(selection) < 2:
             pm.warning("请选择至少两个对象：第一个是源对象，第二个是目标对象。")
             return None
-        source_obj = pm.selected()[0]
-        target_obj = pm.selected()[1]
+        source_obj, target_obj = selection[0], selection[1]
 
     with pm.UndoChunk():
         # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
@@ -757,27 +756,30 @@ def matrix_constraint(
         if rotate:
             # 如果目标对象是骨骼，需要移除jointOrient的影响
             # jointOrient转化为四元数并取逆，被矩阵计算出的四元数相乘，来移除jointOrient的影响
+            # if target_is_joint:
+            #     # 创建所需的四元数节点
+            #     eulerToQuat_node = pm.createNode(
+            #         "eulerToQuat", name=f"eulerToQuat_{node_sufix}"
+            #     )
+            #     quatInvert_node = pm.createNode(
+            #         "quatInvert", name=f"quatInvert_{node_sufix}"
+            #     )
+            #     quatProd_node = pm.createNode("quatProd", name=f"quatProd_{node_sufix}")
+            #     quatToEuler_node = pm.createNode(
+            #         "quatToEuler", name=f"quatToEuler_{node_sufix}"
+            #     )
+            #     # 连接节点
+            #     target_obj.jointOrient.connect(eulerToQuat_node.inputRotate)
+            #     eulerToQuat_node.outputQuat.connect(quatInvert_node.inputQuat)
+            #     decompose_matrix_node.outputQuat.connect(quatProd_node.input1Quat)
+            #     quatInvert_node.outputQuat.connect(quatProd_node.input2Quat)
+            #     quatProd_node.outputQuat.connect(quatToEuler_node.inputQuat)
+            #     quatToEuler_node.outputRotate.connect(target_obj.rotate)
+
+            decompose_matrix_node.outputRotate.connect(target_obj.rotate)
             if target_is_joint:
-                # 创建所需的四元数节点
-                eulerToQuat_node = pm.createNode(
-                    "eulerToQuat", name=f"eulerToQuat_{node_sufix}"
-                )
-                quatInvert_node = pm.createNode(
-                    "quatInvert", name=f"quatInvert_{node_sufix}"
-                )
-                quatProd_node = pm.createNode("quatProd", name=f"quatProd_{node_sufix}")
-                quatToEuler_node = pm.createNode(
-                    "quatToEuler", name=f"quatToEuler_{node_sufix}"
-                )
-                # 连接节点
-                target_obj.jointOrient.connect(eulerToQuat_node.inputRotate)
-                eulerToQuat_node.outputQuat.connect(quatInvert_node.inputQuat)
-                decompose_matrix_node.outputQuat.connect(quatProd_node.input1Quat)
-                quatInvert_node.outputQuat.connect(quatProd_node.input2Quat)
-                quatProd_node.outputQuat.connect(quatToEuler_node.inputQuat)
-                quatToEuler_node.outputRotate.connect(target_obj.rotate)
-            else:
-                decompose_matrix_node.outputRotate.connect(target_obj.rotate)
+                # 如果目标对象是骨骼，需要移除jointOrient的影响,直接置零，不再使用四元数计算以提高性能
+                target_obj.jointOrient.set(dt.Vector())
         if scale:
             decompose_matrix_node.outputScale.connect(target_obj.scale)
         # 收尾
