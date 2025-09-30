@@ -811,6 +811,7 @@ def connect_twist_swing(
     """
     将扭转和摆动驱动的矩阵连接到给定的对象。
     扭转和摆动值用于驱动四元数在源对象的局部矩阵和目标对象的局部矩阵之间进行插值。
+    要将被驱动对象放到驱动对象同层级下
         Args:
             driver (nt.Transform): 用于插值的源对象.
             driven (nt.Transform): 用于插值的目标对象.
@@ -905,12 +906,24 @@ def connect_twist_swing(
 
         slerp_matrix_node.outputMatrix.connect(driven_offset_matrix_node.matrixIn[0])
         driven_offset_matrix_node.matrixIn[1].set(driven_local_matrix)
-        ## 连接最终计算出的矩阵到目标父偏移矩阵
-        final_rotation_node = pm.createNode(
-            "decomposeMatrix", name=f"{driven}_final_rotation"
-        )
-        driven_offset_matrix_node.matrixSum.connect(final_rotation_node.inputMatrix)
-        final_rotation_node.outputRotate.connect(driven.rotate)
+        # ## 直连属性
+        # final_rotation_node = pm.createNode(
+        #     "decomposeMatrix", name=f"{driven}_final_rotation"
+        # )
+        # driven_offset_matrix_node.matrixSum.connect(final_rotation_node.inputMatrix)
+        # final_rotation_node.outputRotate.connect(driven.rotate)
+        ## 连接父对象偏移矩阵
+        driven_offset_matrix_node.matrixSum.connect(driven.offsetParentMatrix)
+        ### 目标对象属性置零
+        for attr in [
+            f"{attr}{axis}" for attr in ["translate", "rotate"] for axis in "XYZ"
+        ]:
+            is_locked = driven.attr(attr).isLocked()
+            if is_locked:
+                driven.attr(attr).setLocked(False)
+            driven.attr(attr).set(0)
+            if is_locked:
+                driven.attr(attr).setLocked(True)
         ## 目标对象是骨骼，则jointOrient置零
         if driven_is_joint:
             for attr in [f"jointOrient{axis}" for axis in "XYZ"]:
