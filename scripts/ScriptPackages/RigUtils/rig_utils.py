@@ -704,18 +704,17 @@ def seamless_space_switch(
 
 
 def matrix_constraint(
-    source_obj=None,
+    source_obj_list=None,
     target_obj=None,
     maintainOffset=True,
     translate=True,
     rotate=True,
-    scale=True,
     target_is_joint=False,
 ):
     """
     矩阵约束.
     Args:
-        source_obj (nt.Transform): 源对象.
+        source_obj_list (nt.Transform): 源对象列表.
         target_obj (nt.Transform): 目标对象.
         maintainOffset (bool): 是否保持偏移.
         translate (bool): 是否约束位移.
@@ -725,63 +724,60 @@ def matrix_constraint(
     Returns:
         None
     """
-    if not source_obj or not target_obj:
+    if not source_obj_list or not target_obj:
         selection = pm.selected()
         if len(selection) < 2:
-            pm.warning("请选择至少两个对象：第一个是源对象，第二个是目标对象。")
+            pm.warning("请选择至少两个对象,最后一个对象为目标对象")
             return None
-        source_obj, target_obj = selection[0], selection[1]
+        source_obj_list, target_obj = selection[0:-1], selection[-1]
+    if not isinstance(source_obj_list, list):
+        source_obj_list = [source_obj_list]
 
     with pm.UndoChunk():
-        # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
-        offset_matrix = dt.Matrix()
-        if maintainOffset:
-            target_world_matrix = target_obj.worldMatrix[0].get()
-            source_world_inverse_matrix = source_obj.worldInverseMatrix[0].get()
-            offset_matrix = target_world_matrix * source_world_inverse_matrix
-        node_sufix = f"{source_obj.name()}_to_{target_obj.name()}"
-        # 矩阵乘法
-        mult_matrix_node = pm.createNode("multMatrix", name=f"mult_matrix_{node_sufix}")
-        mult_matrix_node.matrixIn[0].set(offset_matrix)
-        source_obj.worldMatrix[0].connect(mult_matrix_node.matrixIn[1])
-        target_obj.parentInverseMatrix[0].connect(mult_matrix_node.matrixIn[2])
+        # 创建添加权重矩阵节点
+        wtAddMatrix_node = pm.createNode(
+            "wtAddMatrix", name=f"{target_obj}_wtAddMatrix"
+        )
+        # 遍历源对象列表
+        for i, source_obj in enumerate(source_obj_list):
+            # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
+            offset_matrix = dt.Matrix()
+            if maintainOffset:
+                target_world_matrix = target_obj.worldMatrix[0].get()
+                source_world_inverse_matrix = source_obj.worldInverseMatrix[0].get()
+                offset_matrix = target_world_matrix * source_world_inverse_matrix
+            node_sufix = f"{source_obj}_to_{target_obj}"
+            # 矩阵乘法
+            mult_matrix_node = pm.createNode(
+                "multMatrix", name=f"mult_matrix_{node_sufix}"
+            )
+            mult_matrix_node.matrixIn[0].set(offset_matrix)
+            source_obj.worldMatrix[0].connect(mult_matrix_node.matrixIn[1])
+            # 连接计算出的矩阵到添加权重矩阵节点
+            mult_matrix_node.matrixSum.connect(
+                wtAddMatrix_node.wtMatrix.wtMatrix[i].matrixIn
+            )
+            wtAddMatrix_node.wtMatrix.wtMatrix[i].weightIn.set(1 / len(source_obj_list))
+        # 移除目标对象父对象影响
+        mult_matrix_pim_node = pm.createNode(
+            "multMatrix", name=f"mult_matrix_pim_{node_sufix}"
+        )
+        target_parent_inverse_matrix = target_obj.parentInverseMatrix.get()
+        wtAddMatrix_node.matrixSum.connect(mult_matrix_pim_node.matrixIn[0])
+        mult_matrix_pim_node.matrixIn[1].set(target_parent_inverse_matrix)
         # 分解矩阵
         decompose_matrix_node = pm.createNode(
             "decomposeMatrix", name=f"decompose_matrix_{node_sufix}"
         )
-        mult_matrix_node.matrixSum.connect(decompose_matrix_node.inputMatrix)
+        mult_matrix_pim_node.matrixSum.connect(decompose_matrix_node.inputMatrix)
         # 连接变换
         if translate:
             decompose_matrix_node.outputTranslate.connect(target_obj.translate)
         if rotate:
-            # 如果目标对象是骨骼，需要移除jointOrient的影响
-            # jointOrient转化为四元数并取逆，被矩阵计算出的四元数相乘，来移除jointOrient的影响
-            # if target_is_joint:
-            #     # 创建所需的四元数节点
-            #     eulerToQuat_node = pm.createNode(
-            #         "eulerToQuat", name=f"eulerToQuat_{node_sufix}"
-            #     )
-            #     quatInvert_node = pm.createNode(
-            #         "quatInvert", name=f"quatInvert_{node_sufix}"
-            #     )
-            #     quatProd_node = pm.createNode("quatProd", name=f"quatProd_{node_sufix}")
-            #     quatToEuler_node = pm.createNode(
-            #         "quatToEuler", name=f"quatToEuler_{node_sufix}"
-            #     )
-            #     # 连接节点
-            #     target_obj.jointOrient.connect(eulerToQuat_node.inputRotate)
-            #     eulerToQuat_node.outputQuat.connect(quatInvert_node.inputQuat)
-            #     decompose_matrix_node.outputQuat.connect(quatProd_node.input1Quat)
-            #     quatInvert_node.outputQuat.connect(quatProd_node.input2Quat)
-            #     quatProd_node.outputQuat.connect(quatToEuler_node.inputQuat)
-            #     quatToEuler_node.outputRotate.connect(target_obj.rotate)
-
             decompose_matrix_node.outputRotate.connect(target_obj.rotate)
             if target_is_joint:
-                # 如果目标对象是骨骼，需要移除jointOrient的影响,直接置零，不再使用四元数计算以提高性能
+                # 如果目标对象是骨骼，需要移除jointOrient的影响,直接置零以提高性能，不再使用四元数计算。
                 target_obj.jointOrient.set(dt.Vector())
-        if scale:
-            decompose_matrix_node.outputScale.connect(target_obj.scale)
         # 收尾
         print(f"成功创建从 '{source_obj.name()}' 到 '{target_obj.name()}' 的矩阵约束。")
 
@@ -910,17 +906,12 @@ def connect_twist_swing(
         slerp_matrix_node.outputMatrix.connect(driven_offset_matrix_node.matrixIn[0])
         driven_offset_matrix_node.matrixIn[1].set(driven_local_matrix)
         ## 连接最终计算出的矩阵到目标父偏移矩阵
-        driven_offset_matrix_node.matrixSum.connect(driven.offsetParentMatrix)
-        ## 目标对象属性置零
-        for attr in [
-            f"{attr}{axis}" for attr in ["translate", "rotate"] for axis in "XYZ"
-        ]:
-            is_locked = driven.attr(attr).isLocked()
-            if is_locked:
-                driven.attr(attr).setLocked(False)
-            driven.attr(attr).set(0)
-            if is_locked:
-                driven.attr(attr).setLocked(True)
+        final_rotation_node = pm.createNode(
+            "decomposeMatrix", name=f"{driven}_final_rotation"
+        )
+        driven_offset_matrix_node.matrixSum.connect(final_rotation_node.inputMatrix)
+        final_rotation_node.outputRotate.connect(driven.rotate)
+        ## 目标对象是骨骼，则jointOrient置零
         if driven_is_joint:
             for attr in [f"jointOrient{axis}" for axis in "XYZ"]:
                 is_locked = driven.attr(attr).isLocked()
