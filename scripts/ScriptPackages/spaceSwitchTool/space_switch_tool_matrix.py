@@ -29,6 +29,7 @@ def addSpaceSwitching(
                 defaultValue=0,
                 keyable=True,
             )
+        # 为位移、旋转、缩放添加独立的权重开关
         if not target_node.hasAttr("UseTranslate"):
             target_node.addAttr(
                 "UseTranslate",
@@ -119,10 +120,14 @@ def seamless_space_switch(
 
         # 执行切换：设置枚举属性为新的值,这会导致目标对象发生跳变
         try:
-            pm.setKeyframe(target_node)
             target_node.attr(switch_attribute).set(new_space_index)
             # 设置世界矩阵
             target_node.setMatrix(original_world_matrix, worldSpace=True)
+            # 精确地为变换和切换属性设置关键帧
+            pm.setKeyframe(target_node, attribute="translate")
+            pm.setKeyframe(target_node, attribute="rotate")
+            pm.setKeyframe(target_node, attribute="scale")
+            pm.setKeyframe(target_node, attribute=switch_attribute)
         except Exception as e:
             pm.warning(
                 f"无法设置属性 '{switch_attribute}' 为 {new_space_index}。错误: {e}"
@@ -137,19 +142,36 @@ def bake_space(
     start_frame: int,
     end_frame: int,
 ):
+    """在指定帧范围内烘焙空间切换，保持对象世界空间位置不变。
+    Args:
+        target_node (nt.Transform): 目标对象
+        switch_attribute (str): 空间切换属性
+        new_space_index (int): 新的空间属性索引
+        start_frame (int): 开始帧
+        end_frame (int): 结束帧
+    """
+    # 采集每一帧的世界矩阵
     world_matrix_list: list[dt.Matrix] = []
     for frame in range(start_frame, end_frame + 1):
         pm.currentTime(frame)
         world_matrix = target_node.getMatrix(worldSpace=True)
         world_matrix_list.append(world_matrix)
+    # 切换空间并应用采集到的矩阵
     with pm.UndoChunk():
         for i in range(start_frame, end_frame + 1):
-            pm.currentTime(frame)
-            pm.setKeyframe(target_node)
+            pm.currentTime(i)
             try:
+                # 切换空间
                 target_node.attr(switch_attribute).set(new_space_index)
-                target_node.setMatrix(world_matrix_list[i], worldSpace=True)
-
+                # 获取矩阵列表索引
+                matrix_index = i - start_frame
+                # 设置世界矩阵
+                target_node.setMatrix(world_matrix_list[matrix_index], worldSpace=True)
+                # 为变换和切换属性设置关键帧
+                pm.setKeyframe(target_node, attribute="translate")
+                pm.setKeyframe(target_node, attribute="rotate")
+                pm.setKeyframe(target_node, attribute="scale")
+                pm.setKeyframe(target_node, attribute=switch_attribute)
             except Exception as e:
                 pm.warning(
                     f"无法设置属性 '{switch_attribute}' 为 {new_space_index}。错误: {e}"
