@@ -96,7 +96,7 @@ def replaceShape(source=None, targets=None, *args):
 
 
 def addBlendedJoint(
-    oSel=None, compScale=True, blend=0.5, name=None, select=True, *args
+    base_joint=None, compScale=True, blend=0.5, name=None, select=True, *args
 ):
     """创建混合骨骼
     在选中骨骼同层级创建一个混合骨骼他的旋转是选中骨骼的一半. 使用 pairBlend 节点.
@@ -113,14 +113,14 @@ def addBlendedJoint(
 
     """
     # 验证参数
-    if not oSel:
-        oSel = pm.selected()
-    elif not isinstance(oSel, list):
-        oSel = [oSel]
+    if not base_joint:
+        base_joint = pm.selected()
+    elif not isinstance(base_joint, list):
+        base_joint = [base_joint]
     # 用于储存混合骨骼
     jnt_list = []
     # 遍历所选骨骼
-    for x in oSel:
+    for x in base_joint:
         # 获取骨骼父对象和混合骨骼名称
         if isinstance(x, pm.nodetypes.Joint):
             parent = x.getParent()
@@ -417,9 +417,7 @@ def spline_ik_stretch(
 def limb_stretch(
     root_ctrl: nt.Transform,
     ik_ctrl: nt.Transform,
-    ik_jnt_01: nt.Joint,
-    ik_jnt_02: nt.Joint,
-    ik_jnt_03: nt.Joint,
+    ik_jnt_list: list[nt.Joint],
     stretch_axis: str = "x",
 ):
     """为三关节肢体创建可拉伸的IK系统。
@@ -427,9 +425,7 @@ def limb_stretch(
     Args:
         root_ctrl (nt.Transform):  肢体根控制器
         ik_ctrl (nt.Transform):  肢体末端控制器
-        ik_jnt_01 (nt.Joint): 肢体的根关节。
-        ik_jnt_02 (nt.Joint): 肢体的中间关节。
-        ik_jnt_03 (nt.Joint): 肢体的末端关节。
+        ik_jnt_list (list[nt.Joint]): IK骨骼列表
         stretch_axis (str, optional): 关节的主拉伸轴 ('x', 'y', or 'z')。默认为 "x"。
     """
     # 添加IK控制器属性
@@ -465,12 +461,13 @@ def limb_stretch(
     #         keyable=True,
     #     )
     # 计算静态长度
-    jnt01_world_position: dt.Vector = ik_jnt_01.getTranslation(space="world")
-    jnt02_world_position: dt.Vector = ik_jnt_02.getTranslation(space="world")
-    jnt03_world_position: dt.Vector = ik_jnt_03.getTranslation(space="world")
-    distance1 = jnt01_world_position.distanceTo(jnt02_world_position)
-    distance2 = jnt02_world_position.distanceTo(jnt03_world_position)
-    jnt_static_distance = distance1 + distance2
+    jnt_static_distance = 0
+    for i in range(len(ik_jnt_list) - 1):
+        pre_jnt_position = ik_jnt_list[i].getTranslation(space="world")
+        post_jnt_position = ik_jnt_list[i + 1].getTranslation(space="world")
+        distance = pre_jnt_position.distanceTo(post_jnt_position)
+        jnt_static_distance += distance
+
     # 核心逻辑
     ## 计算动态距离
     dynamic_distance_node = pm.createNode("distanceBetween", name="dynamic_distance")
@@ -511,9 +508,8 @@ def limb_stretch(
     calculate_volume_node.outputX.connect(maintain_volume_node.color1R)
     maintain_volume_node.color2R.set(1)
     ## 连接IK骨骼缩放属性
-    jnt_list = [ik_jnt_01, ik_jnt_02, ik_jnt_03]
     other_axes = [axis for axis in "xyz" if axis != stretch_axis.lower()]
-    for jnt in jnt_list:
+    for jnt in ik_jnt_list:
         max_stretch_node.outColorR.connect(jnt.attr(f"scale{stretch_axis.upper()}"))
 
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[0].upper()}"))

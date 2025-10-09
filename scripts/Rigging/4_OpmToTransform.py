@@ -1,0 +1,3 @@
+from RigUtils.rig_utils import offsetParentMatrix_to_transform
+
+offsetParentMatrix_to_transform()

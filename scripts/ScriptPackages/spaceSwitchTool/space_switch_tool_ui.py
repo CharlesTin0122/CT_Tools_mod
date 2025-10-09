@@ -1,8 +1,9 @@
 from Qt import QtCore, QtWidgets
 import pymel.core as pm
-from spaceSwitchTool.space_switch_tool_logic import (
+from spaceSwitchTool.space_switch_tool_matrix import (
     addSpaceSwitching,
     seamless_space_switch,
+    bake_space,
 )
 
 
@@ -74,26 +75,14 @@ class CreateSpaces(QtWidgets.QWidget):
         self.target_node_btn = QtWidgets.QPushButton("<<")
         self.target_node_btn.setFixedWidth(20)
 
-        self.group_node_lable = QtWidgets.QLabel("Group Node:")
-        self.group_node_line = QtWidgets.QLineEdit()
-        self.group_node_line.setMinimumWidth(120)
-        self.group_node_btn = QtWidgets.QPushButton("<<")
-        self.group_node_btn.setFixedWidth(20)
-
         self.attribute_lable = QtWidgets.QLabel("Switch Attribute:")
         self.attribute_line = QtWidgets.QLineEdit()
         self.attribute_line.setMinimumWidth(120)
 
-        self.constraint_lable = QtWidgets.QLabel("Switch constraint:")
-        self.constraint_combo = QtWidgets.QComboBox()
-        self.constraint_combo.addItem("Parent Constraint", "parent")
-        self.constraint_combo.addItem("Orient Constraint", "orient")
-        self.constraint_combo.addItem("Point Constraint", "point")
-
         self.clear_info_btn = QtWidgets.QPushButton("Clear Info")
 
         self.add_space_btn = QtWidgets.QPushButton("Add Spases")
-        self.add_space_btn.setStyleSheet("background-color: blue;")
+        self.add_space_btn.setStyleSheet("background-color: darkgray;")
 
         self.spaces_area = QtWidgets.QScrollArea()
         self.spaces_area.setWidgetResizable(True)
@@ -105,7 +94,7 @@ class CreateSpaces(QtWidgets.QWidget):
         self.clear_spaces_btn = QtWidgets.QPushButton("Clear Spaces")
 
         self.generate_spaces_btn = QtWidgets.QPushButton("Generate Spaces")
-        self.generate_spaces_btn.setStyleSheet("background-color: blue;")
+        self.generate_spaces_btn.setStyleSheet("background-color: darkgray;")
 
     def create_layout(self):
         target_node_layout = QtWidgets.QHBoxLayout()
@@ -115,28 +104,14 @@ class CreateSpaces(QtWidgets.QWidget):
         target_node_layout.addWidget(self.target_node_line)
         target_node_layout.addWidget(self.target_node_btn)
 
-        group_node_layout = QtWidgets.QHBoxLayout()
-        group_node_layout.setSpacing(5)
-        group_node_layout.setStretch(1, 1)
-        group_node_layout.addWidget(self.group_node_lable)
-        group_node_layout.addWidget(self.group_node_line)
-        group_node_layout.addWidget(self.group_node_btn)
-
         attribute_layout = QtWidgets.QHBoxLayout()
         attribute_layout.setSpacing(5)
         attribute_layout.addWidget(self.attribute_lable)
         attribute_layout.addWidget(self.attribute_line)
 
-        constraint_layout = QtWidgets.QHBoxLayout()
-        constraint_layout.setSpacing(5)
-        constraint_layout.addWidget(self.constraint_lable)
-        constraint_layout.addWidget(self.constraint_combo)
-
         info_layout = QtWidgets.QVBoxLayout()
         info_layout.addLayout(target_node_layout)
-        info_layout.addLayout(group_node_layout)
         info_layout.addLayout(attribute_layout)
-        info_layout.addLayout(constraint_layout)
         info_layout.addWidget(self.clear_info_btn)
         info_group = QtWidgets.QGroupBox("Info")
         info_group.setLayout(info_layout)
@@ -156,7 +131,6 @@ class CreateSpaces(QtWidgets.QWidget):
 
     def create_connections(self):
         self.target_node_btn.clicked.connect(self.on_target_node_btn_clicked)
-        self.group_node_btn.clicked.connect(self.on_group_node_btn_clicked)
         self.clear_info_btn.clicked.connect(self.on_clear_info_btn_clicked)
         self.clear_spaces_btn.clicked.connect(self.on_clear_spaces_btn_clicked)
         self.add_space_btn.clicked.connect(self.on_add_space_btn_clicked)
@@ -171,17 +145,8 @@ class CreateSpaces(QtWidgets.QWidget):
         self.target_node_line.setText(node_name)
 
     @QtCore.Slot()
-    def on_group_node_btn_clicked(self):
-        selected_obj = pm.selected()[0]
-        if not selected_obj:
-            pm.warning("Please select node")
-        node_name = selected_obj.name()
-        self.group_node_line.setText(node_name)
-
-    @QtCore.Slot()
     def on_clear_info_btn_clicked(self):
         self.target_node_line.clear()
-        self.group_node_line.clear()
         self.attribute_line.clear()
 
     @QtCore.Slot()
@@ -206,18 +171,14 @@ class CreateSpaces(QtWidgets.QWidget):
     @QtCore.Slot()
     def on_generate_spaces_btn_clicked(self):
         target_node = pm.PyNode(self.target_node_line.text())
-        target_group = pm.PyNode(self.group_node_line.text())
         switch_attributre = self.attribute_line.text()
-        switch_constraint = self.constraint_combo.currentData()
         driver_list = [
             pm.PyNode(item.driver_node_line.text()) for item in self.item_list
         ]
         enum_item_list = [item.display_name_line.text() for item in self.item_list]
         addSpaceSwitching(
             target_node,
-            target_group,
             switch_attributre,
-            switch_constraint,
             driver_list,
             enum_item_list,
         )
@@ -239,12 +200,6 @@ class SwitchSpases(QtWidgets.QWidget):
         self.target_node_btn = QtWidgets.QPushButton("<<")
         self.target_node_btn.setFixedWidth(20)
 
-        self.group_node_lable = QtWidgets.QLabel("Group Node:")
-        self.group_node_line = QtWidgets.QLineEdit()
-        self.group_node_line.setMinimumWidth(120)
-        self.group_node_btn = QtWidgets.QPushButton("<<")
-        self.group_node_btn.setFixedWidth(20)
-
         self.attribute_lable = QtWidgets.QLabel("Switch Attribute:")
         self.attribute_line = QtWidgets.QLineEdit()
         self.attribute_line.setMinimumWidth(120)
@@ -255,7 +210,7 @@ class SwitchSpases(QtWidgets.QWidget):
         self.spaces_list = QtWidgets.QListWidget()
         self.spaces_list.setSelectionMode(QtWidgets.QListWidget.SingleSelection)
         self.switch_space_btn = QtWidgets.QPushButton("Switch_Space")
-        self.switch_space_btn.setStyleSheet("background-color: blue;")
+        self.switch_space_btn.setStyleSheet("background-color: darkgray;")
         self.start_frame_label = QtWidgets.QLabel("Start Frame:")
         self.start_frame_spin = QtWidgets.QSpinBox()
         self.start_frame_spin.setFixedWidth(60)
@@ -269,7 +224,7 @@ class SwitchSpases(QtWidgets.QWidget):
         self.end_frame_spin.setMaximum(10000)
         self.end_frame_spin.setSingleStep(1)
         self.bake_space_btn = QtWidgets.QPushButton("Bake_Space")
-        self.bake_space_btn.setStyleSheet("background-color: blue;")
+        self.bake_space_btn.setStyleSheet("background-color: darkgray;")
 
     def create_layout(self):
         target_node_layout = QtWidgets.QHBoxLayout()
@@ -279,13 +234,6 @@ class SwitchSpases(QtWidgets.QWidget):
         target_node_layout.addWidget(self.target_node_line)
         target_node_layout.addWidget(self.target_node_btn)
 
-        group_node_layout = QtWidgets.QHBoxLayout()
-        group_node_layout.setSpacing(5)
-        group_node_layout.setStretch(1, 1)
-        group_node_layout.addWidget(self.group_node_lable)
-        group_node_layout.addWidget(self.group_node_line)
-        group_node_layout.addWidget(self.group_node_btn)
-
         attribute_layout = QtWidgets.QHBoxLayout()
         attribute_layout.setSpacing(5)
         attribute_layout.addWidget(self.attribute_lable)
@@ -293,7 +241,6 @@ class SwitchSpases(QtWidgets.QWidget):
 
         info_layout = QtWidgets.QVBoxLayout()
         info_layout.addLayout(target_node_layout)
-        info_layout.addLayout(group_node_layout)
         info_layout.addLayout(attribute_layout)
         info_layout.addWidget(self.clear_info_btn)
         info_group = QtWidgets.QGroupBox("Info")
@@ -324,7 +271,6 @@ class SwitchSpases(QtWidgets.QWidget):
 
     def create_connections(self):
         self.target_node_btn.clicked.connect(self.on_target_node_btn_clicked)
-        self.group_node_btn.clicked.connect(self.on_group_node_btn_clicked)
         self.clear_info_btn.clicked.connect(self.on_clear_info_btn_clicked)
         self.load_spaces_btn.clicked.connect(self.on_load_spaces_btn_clicked)
         self.switch_space_btn.clicked.connect(self.on_switch_space_btn_clicked)
@@ -339,17 +285,8 @@ class SwitchSpases(QtWidgets.QWidget):
         self.target_node_line.setText(node_name)
 
     @QtCore.Slot()
-    def on_group_node_btn_clicked(self):
-        selected_obj = pm.selected()[0]
-        if not selected_obj:
-            pm.warning("Please select node")
-        node_name = selected_obj.name()
-        self.group_node_line.setText(node_name)
-
-    @QtCore.Slot()
     def on_clear_info_btn_clicked(self):
         self.target_node_line.clear()
-        self.group_node_line.clear()
         self.attribute_line.clear()
         self.spaces_list.clear()
 
@@ -369,28 +306,24 @@ class SwitchSpases(QtWidgets.QWidget):
     @QtCore.Slot()
     def on_switch_space_btn_clicked(self):
         target_node = pm.PyNode(self.target_node_line.text())
-        target_group = pm.PyNode(self.group_node_line.text())
         switch_attribute = self.attribute_line.text()
         new_space_index = self.spaces_list.selectedIndexes()[0].row()
-        seamless_space_switch(
-            target_node, target_group, switch_attribute, new_space_index
-        )
+        try:
+            seamless_space_switch(target_node, switch_attribute, new_space_index)
+        except Exception as e:
+            pm.warning(e)
 
     @QtCore.Slot()
     def on_bake_space_btn_clicked(self):
         target_node = pm.PyNode(self.target_node_line.text())
-        target_group = pm.PyNode(self.group_node_line.text())
         switch_attribute = self.attribute_line.text()
         new_space_index = self.spaces_list.selectedIndexes()[0].row()
-
         start_frame = self.start_frame_spin.value()
         end_frame = self.end_frame_spin.value()
 
-        for frame in range(start_frame, end_frame + 1):
-            pm.currentTime(frame)
-            seamless_space_switch(
-                target_node, target_group, switch_attribute, new_space_index
-            )
+        bake_space(
+            target_node, switch_attribute, new_space_index, start_frame, end_frame
+        )
 
 
 class SpaceSwitchingTool(QtWidgets.QDialog):
