@@ -69,7 +69,7 @@ class TcToolsUI(QDialog):
     def populate_tool_box(self):
         """填充 QToolBox 的内容"""
         # 确定菜单分类
-        category_list = ["modeling", "Rigging", "Animation", "TD"]
+        category_list = ["Modeling", "Rigging", "Animation", "TD"]
         # 获取当前脚本所在路径：scripts/
         current_file_path = Path(__file__).parent
         # 根据分类和类别下的脚本

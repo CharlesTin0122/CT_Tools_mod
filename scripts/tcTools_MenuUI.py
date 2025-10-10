@@ -11,7 +11,7 @@ import sys
 import pymel.core as pc
 
 # 确定菜单分类
-menuList = ["modeling", "Rigging", "Animation", "TD"]
+menuList = ["Modeling", "Rigging", "Animation", "TD"]
 # 获取当前脚本所在路径
 currentFilePath = r"{}".format(os.path.dirname(__file__))
 # 获取脚本包所在路径
