@@ -354,17 +354,6 @@ class SpaceSwitchingTool(QtWidgets.QDialog):
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.addWidget(self.tab_widget)
 
-    def create_connections(self):
-        self.tab_widget.currentChanged.connect(self.on_current_index_changed)
-
-    @QtCore.Slot()
-    def on_current_index_changed(self, index):
-        print(f"Current Index: {index}")  # 打印当前选项卡索引
-
-    @QtCore.Slot()
-    def template_slot(self):
-        pass
-
     @staticmethod
     def get_maya_main_window():
         """通过 QApplication 获取 Maya 主窗口的 PySide 实例"""

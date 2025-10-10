@@ -13,7 +13,6 @@ import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
 
 
-# mGear Utiliyies
 def addOffsetGroups(objs=None, *args):
     """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零
 
@@ -47,62 +46,6 @@ def selectDeformers(*args):
     oSel = pm.selected()[0]
     oColl = pm.skinCluster(oSel, query=True, influence=True)
     pm.select(oColl)
-
-
-def replaceShape(source=None, targets=None, *args):
-    """将源对象的形节点替换目标对象的形节点,常用语替换控制器形状.
-    Args:
-        source (None, PyNode): 源节点
-        targets (None, list of pyNode): 目标节点或列表
-        *args: Maya 占位符
-    Returns:
-        None
-    """
-    # 验证参数
-    if not source and not targets:
-        oSel = pm.selected()
-        if len(oSel) < 2:
-            pm.displayWarning("At less 2 objects must be selected")
-            return None
-        else:
-            source = oSel[0]  # 第一个选择对象为源节点
-            targets = oSel[1:]  # 第二个和后面的为目标节点
-    # 遍历目标对象
-    for target in targets:
-        # 复制一份源节点用于替换
-        source2 = pm.duplicate(source)[0]
-        # 获取目标对象的形节点
-        shape = target.getShapes()
-        # 用于储存目标对象形节点属性连接列表
-        cnx = []
-        if shape:
-            # 列出连接的属性，TODO：有空再次检查代码，貌似属性链接有问题
-            # plugs参数：列出连接的节点和属性（Attribute('skinCluster3.outputGeometry[0]')），
-            # 不添加此参数只会列出连接的节点名称（  nt.SkinCluster('skinCluster3'),）
-            # connections：会返回一个配对列表。列表中的每一项元组，存储了所有连接的“来源”和“去向”。
-            # 格式为：(Attribute('mesh_bodyShape.inMesh'),Attribute('skinCluster3.outputGeometry[0]'))。
-            cnx = shape[0].listConnections(plugs=True, connections=True)
-            # c[1]为连接的源头（Attribute('skinCluster3.outputGeometry[0]')），
-            # c[0].shortName()提取出不带节点名的纯属性名（"inMesh"）,
-            # 因为我们断开连接之后要删除该形节点，所以我们只获取属性名即可重新连接新的形节点
-            cnx = [[c[1], c[0].shortName()] for c in cnx]
-            # 断开连接
-            for s in shape:
-                for c in s.listConnections(plugs=True, connections=True):
-                    pm.disconnectAttr(c[0])
-        # 删除目标对象的形节点
-        pm.delete(shape)
-        # 将复制出来的源节点的形节点作为目标节点的子对象，
-        # relative保持相对变换，shape将一个形状节点“过继”给一个新的变换节点
-        pm.parent(source2.getShapes(), target, relative=True, shape=True)
-        # 重新连接属性
-        for i, sh in enumerate(target.getShapes()):
-            # Restore shapes connections
-            for c in cnx:
-                pm.connectAttr(c[0], sh.attr(c[1]))
-            pm.rename(sh, f"{target.name()}_{i}_shape")
-        # 删除复制出来的变换节点
-        pm.delete(source2)
 
 
 def addBlendedJoint(
@@ -288,6 +231,83 @@ def offsetParentMatrix_to_transform(objs=None):
         obj.setMatrix(obj_matrix * obj_offsetParentMatrix)
         # 设置对象偏移父矩阵为单位矩阵,变换置零
         obj.offsetParentMatrix.set(dt.Matrix())
+
+
+def matrix_constraint(
+    source_obj_list=None,
+    target_obj=None,
+    maintainOffset=True,
+    translate=True,
+    rotate=True,
+):
+    """
+    矩阵约束.
+    Args:
+        source_obj_list (nt.Transform): 源对象列表.
+        target_obj (nt.Transform): 目标对象.
+        maintainOffset (bool): 是否保持偏移.
+        translate (bool): 是否约束位移.
+        rotate (bool): 是否约束旋转.
+        scale (bool): 是否约束缩放.
+    Returns:
+        None
+    """
+    if not source_obj_list or not target_obj:
+        selection = pm.selected()
+        if len(selection) < 2:
+            pm.warning("请选择至少两个对象,最后一个对象为目标对象")
+            return None
+        source_obj_list, target_obj = selection[0:-1], selection[-1]
+    if not isinstance(source_obj_list, list):
+        source_obj_list = [source_obj_list]
+
+    with pm.UndoChunk():
+        # 创建添加权重矩阵节点
+        wtAddMatrix_node = pm.createNode(
+            "wtAddMatrix", name=f"{target_obj}_wtAddMatrix"
+        )
+        # 遍历源对象列表
+        for i, source_obj in enumerate(source_obj_list):
+            # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
+            offset_matrix = dt.Matrix()
+            if maintainOffset:
+                target_world_matrix = target_obj.worldMatrix[0].get()
+                source_world_inverse_matrix = source_obj.worldInverseMatrix[0].get()
+                offset_matrix = target_world_matrix * source_world_inverse_matrix
+            node_sufix = f"{source_obj}_to_{target_obj}"
+            # 矩阵乘法
+            mult_matrix_node = pm.createNode(
+                "multMatrix", name=f"mult_matrix_{node_sufix}"
+            )
+            mult_matrix_node.matrixIn[0].set(offset_matrix)
+            source_obj.worldMatrix[0].connect(mult_matrix_node.matrixIn[1])
+            # 连接计算出的矩阵到添加权重矩阵节点
+            mult_matrix_node.matrixSum.connect(
+                wtAddMatrix_node.wtMatrix.wtMatrix[i].matrixIn
+            )
+            wtAddMatrix_node.wtMatrix.wtMatrix[i].weightIn.set(1 / len(source_obj_list))
+        # 移除目标对象父对象影响
+        mult_matrix_pim_node = pm.createNode(
+            "multMatrix", name=f"mult_matrix_pim_{node_sufix}"
+        )
+        target_parent_inverse_matrix = target_obj.parentInverseMatrix.get()
+        wtAddMatrix_node.matrixSum.connect(mult_matrix_pim_node.matrixIn[0])
+        mult_matrix_pim_node.matrixIn[1].set(target_parent_inverse_matrix)
+        # 分解矩阵
+        decompose_matrix_node = pm.createNode(
+            "decomposeMatrix", name=f"decompose_matrix_{node_sufix}"
+        )
+        mult_matrix_pim_node.matrixSum.connect(decompose_matrix_node.inputMatrix)
+        # 连接变换
+        if translate:
+            decompose_matrix_node.outputTranslate.connect(target_obj.translate)
+        if rotate:
+            decompose_matrix_node.outputRotate.connect(target_obj.rotate)
+            if isinstance(target_obj, nt.Joint):
+                # 如果目标对象是骨骼，需要移除jointOrient的影响,直接置零以提高性能，不再使用四元数计算。
+                target_obj.jointOrient.set(dt.Vector())
+        # 收尾
+        print(f"成功创建从 '{source_obj.name()}' 到 '{target_obj.name()}' 的矩阵约束。")
 
 
 # Rig Utilities
@@ -526,143 +546,6 @@ def limb_stretch(
         maintain_volume_node.outputR.connect(jnt.attr(f"scale{other_axes[1].upper()}"))
 
 
-def reverse_foot(
-    foot_ik_ctrl: nt.Transform,
-    toe_ik_ctrl: nt.Transform,
-    foot_ik_handle: nt.IkHandle,
-    ball_ik_handle: nt.IkHandle,
-    toe_ik_handle: nt.IkHandle,
-    heel_rev_ctrl: nt.Transform,
-    tip_rev_ctrl: nt.Transform,
-    out_rev_ctrl: nt.Transform,
-    in_rev_ctrl: nt.Transform,
-    ball_rev_ctrl: nt.Transform,
-):
-    """设置反转脚
-    TODO:设置脚掌Pivot，将其完善为一个插件，包含界面，先摆放locater位置再生成反转脚
-
-    Args:
-        foot_ik_ctrl (nt.Transform): 脚部IK控制器,控制脚部变换
-        toe_ik_ctrl (nt.Transform): 脚趾IK控制器,控制脚趾的旋转
-        foot_ik_handle (nt.IkHandle): 脚部IK句柄
-        ball_ik_handle (nt.IkHandle): 脚趾根IK句柄
-        toe_ik_handle (nt.IkHandle): 脚尖IK句柄
-        heel_rev_ctrl (nt.Transform): 脚跟反转控制器
-        tip_rev_ctrl (nt.Transform): 脚尖反转控制器
-        out_rev_ctrl (nt.Transform): 脚外侧反转控制器
-        in_rev_ctrl (nt.Transform): 脚内侧反转控制器
-        ball_rev_ctrl (nt.Transform): 脚趾根反转控制器
-    """
-    # 创建控制器列表
-    foot_ctrls = [
-        toe_ik_ctrl,
-        heel_rev_ctrl,
-        tip_rev_ctrl,
-        out_rev_ctrl,
-        in_rev_ctrl,
-        ball_rev_ctrl,
-    ]
-    # 为控制器创建偏移组
-    (
-        toe_ik_ctrl_osg,
-        heel_ctrl_osg,
-        tip_ctrl_osg,
-        out_ctrl_osg,
-        in_ctrl_osg,
-        ball_ctrl_osg,
-    ) = addOffsetGroups(foot_ctrls)
-    # 创建反转脚
-    pm.parent(heel_ctrl_osg, foot_ik_ctrl)
-    pm.parent(tip_ctrl_osg, heel_rev_ctrl)
-    pm.parent(out_ctrl_osg, tip_rev_ctrl)
-    pm.parent(in_ctrl_osg, out_rev_ctrl)
-    pm.parent(toe_ik_ctrl_osg, in_rev_ctrl)
-    pm.parent(ball_ctrl_osg, in_rev_ctrl)
-
-    pm.parent(toe_ik_handle, toe_ik_ctrl)
-    pm.parent(foot_ik_handle, ball_ik_handle, ball_rev_ctrl)
-    pm.select(clear=True)
-
-
-def matrix_constraint(
-    source_obj_list=None,
-    target_obj=None,
-    maintainOffset=True,
-    translate=True,
-    rotate=True,
-    target_is_joint=False,
-):
-    """
-    矩阵约束.
-    Args:
-        source_obj_list (nt.Transform): 源对象列表.
-        target_obj (nt.Transform): 目标对象.
-        maintainOffset (bool): 是否保持偏移.
-        translate (bool): 是否约束位移.
-        rotate (bool): 是否约束旋转.
-        scale (bool): 是否约束缩放.
-        target_is_joint (bool): 目标对象是否为骨骼，如果是则移除jointOrient的影响.
-    Returns:
-        None
-    """
-    if not source_obj_list or not target_obj:
-        selection = pm.selected()
-        if len(selection) < 2:
-            pm.warning("请选择至少两个对象,最后一个对象为目标对象")
-            return None
-        source_obj_list, target_obj = selection[0:-1], selection[-1]
-    if not isinstance(source_obj_list, list):
-        source_obj_list = [source_obj_list]
-
-    with pm.UndoChunk():
-        # 创建添加权重矩阵节点
-        wtAddMatrix_node = pm.createNode(
-            "wtAddMatrix", name=f"{target_obj}_wtAddMatrix"
-        )
-        # 遍历源对象列表
-        for i, source_obj in enumerate(source_obj_list):
-            # 通过目标对象世界矩阵左乘源对象世界逆矩阵获取两者之间的偏移矩阵
-            offset_matrix = dt.Matrix()
-            if maintainOffset:
-                target_world_matrix = target_obj.worldMatrix[0].get()
-                source_world_inverse_matrix = source_obj.worldInverseMatrix[0].get()
-                offset_matrix = target_world_matrix * source_world_inverse_matrix
-            node_sufix = f"{source_obj}_to_{target_obj}"
-            # 矩阵乘法
-            mult_matrix_node = pm.createNode(
-                "multMatrix", name=f"mult_matrix_{node_sufix}"
-            )
-            mult_matrix_node.matrixIn[0].set(offset_matrix)
-            source_obj.worldMatrix[0].connect(mult_matrix_node.matrixIn[1])
-            # 连接计算出的矩阵到添加权重矩阵节点
-            mult_matrix_node.matrixSum.connect(
-                wtAddMatrix_node.wtMatrix.wtMatrix[i].matrixIn
-            )
-            wtAddMatrix_node.wtMatrix.wtMatrix[i].weightIn.set(1 / len(source_obj_list))
-        # 移除目标对象父对象影响
-        mult_matrix_pim_node = pm.createNode(
-            "multMatrix", name=f"mult_matrix_pim_{node_sufix}"
-        )
-        target_parent_inverse_matrix = target_obj.parentInverseMatrix.get()
-        wtAddMatrix_node.matrixSum.connect(mult_matrix_pim_node.matrixIn[0])
-        mult_matrix_pim_node.matrixIn[1].set(target_parent_inverse_matrix)
-        # 分解矩阵
-        decompose_matrix_node = pm.createNode(
-            "decomposeMatrix", name=f"decompose_matrix_{node_sufix}"
-        )
-        mult_matrix_pim_node.matrixSum.connect(decompose_matrix_node.inputMatrix)
-        # 连接变换
-        if translate:
-            decompose_matrix_node.outputTranslate.connect(target_obj.translate)
-        if rotate:
-            decompose_matrix_node.outputRotate.connect(target_obj.rotate)
-            if target_is_joint:
-                # 如果目标对象是骨骼，需要移除jointOrient的影响,直接置零以提高性能，不再使用四元数计算。
-                target_obj.jointOrient.set(dt.Vector())
-        # 收尾
-        print(f"成功创建从 '{source_obj.name()}' 到 '{target_obj.name()}' 的矩阵约束。")
-
-
 def create_export_joints(source_jnts=None, sufix="exp"):
     """为绑定创建游戏引擎用的蒙皮导出骨骼"""
     if not source_jnts:
@@ -676,6 +559,6 @@ def create_export_joints(source_jnts=None, sufix="exp"):
         exp_jnt = pm.joint(name=f"{jnt.name()}_{sufix}")
         pm.matchTransform(exp_jnt, jnt, position=True, rotation=True, scale=True)
         pm.makeIdentity(exp_jnt, apply=True)
-        matrix_constraint(jnt, exp_jnt, maintainOffset=False, target_is_joint=True)
+        matrix_constraint(jnt, exp_jnt, maintainOffset=False)
         exp_jnt_list.append(exp_jnt)
     return exp_jnt_list
