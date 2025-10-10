@@ -12,31 +12,8 @@ import math
 import pymel.core as pc
 
 
-root_name = "root_main_C0_ctl"
-pelvis_name = "body_C0_ctl"
 
-ctrl_loc_list = []
-
-root_motion_tx = False
-root_motion_ty = True
-root_motion_tz = False
-
-root_motion_rx = False
-root_motion_ry = False
-root_motion_rz = False
-
-
-def get_unique_name(base_name):
-    """在场景中生成一个唯一的名称."""
-    name = base_name
-    counter = 1
-    while pc.objExists(name):
-        name = f"{base_name}_{counter}"
-        counter += 1
-    return name
-
-
-def pin_ctrl_anim(ctrl_list=None):
+def pin_ctrl_anim( ctrl_list=None):
     """为选定的控制器生成pin控制动画
     原理：
     1. 为每个控制器创建一个空间定位器.
@@ -66,7 +43,6 @@ def pin_ctrl_anim(ctrl_list=None):
     for i, ctrl in enumerate(sel_list):
         pc.parentConstraint(ctrl_loc_list[i], ctrl, mo=True)
 
-
 def bake_pined_anim(ctrl_list=None):
     """烘焙控制器动画，并删除空间定位器"""
     pc.bakeResults(
@@ -77,8 +53,7 @@ def bake_pined_anim(ctrl_list=None):
     )
     pc.delete(ctrl_loc_list)
 
-
-def Inplace_to_RootMotion(root_ctrl, pelvis_ctrl, ik_ctrls=None):
+def Inplace_to_RootMotion(root_ctrl, pelvis_ctrl, ik_ctrl_list=None):
     """
     在maya中转换原地动画为根动画.
 
@@ -100,8 +75,8 @@ def Inplace_to_RootMotion(root_ctrl, pelvis_ctrl, ik_ctrls=None):
     lastFrame = math.ceil(pc.findKeyframe(pelvis_ctrl, which="last"))
     pc.currentTime(firstFrame)
     # 用唯一的名称创建定位器
-    loc_root = pc.spaceLocator(name=get_unique_name("loc_root"))
-    loc_pelvis = pc.spaceLocator(name=get_unique_name("loc_pelvis"))
+    loc_root = pc.spaceLocator(name="loc_root")
+    loc_pelvis = pc.spaceLocator(name="loc_pelvis")
 
     try:
         # 控制器约束定位器
@@ -116,7 +91,7 @@ def Inplace_to_RootMotion(root_ctrl, pelvis_ctrl, ik_ctrls=None):
         # 删除约束节点
         pc.delete(loc_root_constr, loc_pelvis_constr)
         # 钉住pelvis控制器和IK控制器
-        pin_ctrl_anim([pelvis_ctrl] + (ik_ctrls or []))
+        pin_ctrl_anim([pelvis_ctrl] + (ik_ctrl_list or []))
 
         # 胯定位器分别用点约束和方向约束约束根定位器
         loc_point_contr = pc.pointConstraint(loc_pelvis, loc_root, maintainOffset=True)
@@ -167,16 +142,14 @@ def Inplace_to_RootMotion(root_ctrl, pelvis_ctrl, ik_ctrls=None):
         )
         # 删除约束节点
         pc.delete(jnt_root_constr)
-        bake_pined_anim([pelvis_ctrl] + (ik_ctrls or []))
+        bake_pined_anim([pelvis_ctrl] + (ik_ctrl_list or []))
         # 执行欧拉过滤器
         pc.filterCurve(root_ctrl, filter="euler")
     finally:
         # 清理定位器
         pc.delete([obj for obj in [loc_root, loc_pelvis] if pc.objExists(obj)])
 
-
-# TODO : 根动画转换为原地动画
-def RootMotion_to_Inplace(root_name, pelvis_name, foot_l_name=None, foot_r_name=None):
+def RootMotion_to_Inplace(root_name, pelvis_name, ik_ctrl_list=None):
     # 验证输入参数
     if not pc.objExists(root_name):
         raise ValueError(f"Root bone '{root_name}' does not exist in the scene.")
@@ -187,9 +160,9 @@ def RootMotion_to_Inplace(root_name, pelvis_name, foot_l_name=None, foot_r_name=
     lastFrame = math.ceil(pc.findKeyframe(pelvis_name, which="last"))
     pc.currentTime(firstFrame)
     # 用唯一的名称创建定位器
-    locPelvis = pc.spaceLocator(name=get_unique_name("locPelvis"))
-    locLFoot = pc.spaceLocator(name=get_unique_name("locLFoot"))
-    locRFoot = pc.spaceLocator(name=get_unique_name("locRFoot"))
+    locPelvis = pc.spaceLocator(name="locPelvis")
+    locLFoot = pc.spaceLocator(name="locLFoot")
+    locRFoot = pc.spaceLocator(name=g"locRFoot")
     # 控制器约束定位器
     pelvis_constr = pc.parentConstraint(pelvis_name, locPelvis)
     foot_l_constr = pc.parentConstraint(foot_l_name, locLFoot)
@@ -223,10 +196,3 @@ def RootMotion_to_Inplace(root_name, pelvis_name, foot_l_name=None, foot_r_name=
     )
 
 
-# 运行脚本
-if __name__ == "__main__":
-    Inplace_to_RootMotion(
-        "root_main_C0_ctl",
-        "body_C0_ctl",
-        ik_ctrls=["leg_R0_ik_ctl", "leg_L0_ik_ctl"],
-    )
