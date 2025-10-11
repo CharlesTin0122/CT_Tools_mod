@@ -340,7 +340,6 @@ class SpaceSwitchingTool(QtWidgets.QDialog):
 
         self.create_widgets()
         self.create_layout()
-        self.create_connections()
 
     def create_widgets(self):
         self.create_spaces_widget = CreateSpaces()

@@ -99,51 +99,53 @@ class QuatDecomposeNode(om.MPxNode):
         )
 
     def compute(self, plug, dataBlock):
-        if plug not in (self.twistQuat, self.swingQuat):
+        if plug not in (QuatDecomposeNode.twistQuat, QuatDecomposeNode.swingQuat):
             return
 
-        # 读取输入四元数
+        # 输入四元数
         quatHandle = dataBlock.inputValue(self.inputQuat)
         qx = quatHandle.child(0).asDouble()
         qy = quatHandle.child(1).asDouble()
         qz = quatHandle.child(2).asDouble()
         qw = quatHandle.child(3).asDouble()
-        q = om.MQuaternion(qx, qy, qz, qw).normalizeIt()
 
-        # 读取轴
+        q = om.MQuaternion(qx, qy, qz, qw)
+        q.normalizeIt()
+
+        # Twist 轴
         axis_value = dataBlock.inputValue(self.twistAxis).asShort()
-        if axis_value == 0:
-            twist_axis = om.MVector(1, 0, 0)
-        elif axis_value == 1:
-            twist_axis = om.MVector(0, 1, 0)
-        else:
-            twist_axis = om.MVector(0, 0, 1)
+        twist_axis = [om.MVector(1, 0, 0), om.MVector(0, 1, 0), om.MVector(0, 0, 1)][
+            axis_value
+        ]
 
         # 计算 Swing / Twist
         rotated_axis = q * twist_axis
-        swing_axis = rotated_axis ^ twist_axis
-        if swing_axis.length() < 1e-8:
+        dot_val = max(-1.0, min(1.0, rotated_axis * twist_axis))
+
+        if abs(dot_val - 1.0) < 1e-8:
             swing = om.MQuaternion()
         else:
-            swing_axis.normalize()
-            cos_theta = max(-1.0, min(1.0, rotated_axis * twist_axis))
-            swing_angle = math.acos(cos_theta)
+            swing_axis = (rotated_axis ^ twist_axis).normalize()
+            swing_angle = math.acos(dot_val)
             swing = om.MQuaternion(swing_axis, swing_angle)
+
         twist = q * swing.inverse()
 
-        # 写输出
+        # 输出 Twist
         twistHandle = dataBlock.outputValue(self.twistQuat)
         twistHandle.child(0).setDouble(twist.x)
         twistHandle.child(1).setDouble(twist.y)
         twistHandle.child(2).setDouble(twist.z)
         twistHandle.child(3).setDouble(twist.w)
 
+        # 输出 Swing
         swingHandle = dataBlock.outputValue(self.swingQuat)
         swingHandle.child(0).setDouble(swing.x)
         swingHandle.child(1).setDouble(swing.y)
         swingHandle.child(2).setDouble(swing.z)
         swingHandle.child(3).setDouble(swing.w)
 
+        # 标记干净
         dataBlock.setClean(plug)
 
 
