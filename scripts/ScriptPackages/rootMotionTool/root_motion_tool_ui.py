@@ -8,11 +8,16 @@
 @Desc    :   当前文件作用
 """
 
-import math
 from Qt import QtCore, QtWidgets
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
-import pymel.core as pc
+import pymel.core as pm
+import pymel.core.nodetypes as nt
+import pymel.core.datatypes as dt
+from rootMotionTool.root_motion_tool_logic import (
+    Inplace_to_RootMotion,
+    RootMotion_to_Inplace,
+)
 
 
 class RootMotionTool(QtWidgets.QDialog):
@@ -23,19 +28,6 @@ class RootMotionTool(QtWidgets.QDialog):
         if parent is None:
             parent = self.get_maya_main_window()
         super().__init__(parent)
-
-        self.root_name = None
-        self.pelvis_name = None
-
-        self.ctrl_loc_list = []
-
-        self.root_motion_tx = False
-        self.root_motion_ty = True
-        self.root_motion_tz = False
-
-        self.root_motion_rx = False
-        self.root_motion_ry = False
-        self.root_motion_rz = False
 
         self.setWindowTitle(RootMotionTool.WINDOW_TITLE)
         self.setMinimumSize(300, 120)
@@ -123,193 +115,70 @@ class RootMotionTool(QtWidgets.QDialog):
         main_layout.addWidget(self.rootmotion_to_inplace_btn)
 
     def create_connections(self):
-        pass
+        self.root_obj_btn.clicked.connect(self.on_root_obj_btn)
+        self.pelvis_obj_btn.clicked.connect(self.on_pelvis_obj_btn)
+        self.ik_ctrls_btn.clicked.connect(self.on_ik_ctrls_list)
+        self.inplace_to_rootmotion_btn.clicked.connect(
+            self.on_inplace_to_rootmotion_btn
+        )
+        self.rootmotion_to_inplace_btn.clicked.connect(
+            self.on_rootmotion_to_inplace_btn
+        )
 
     @QtCore.Slot()
-    def template_slot(self):
-        pass
+    def on_root_obj_btn(self):
+        select_obj = pm.selected()
+        if not select_obj:
+            pm.warning("Please select root obj")
+        obj_name = select_obj[0].name()
+        self.root_obj_line.setText(obj_name)
 
-    # def pin_ctrl_anim(self, ctrl_list=None):
-    #     """为选定的控制器生成pin控制动画
-    #     原理：
-    #     1. 为每个控制器创建一个空间定位器.
-    #     2. 控制器约束定位器，并烘焙定位器动画，便将控制器的动画传递到定位器上.
-    #     3. 删除约束节点.
-    #     4. 反过来,定位器约束控制器,控制器便被Pin住了.
-    #     5. 这样便可以在不破坏身体动画的前提下修改main和root控制器,一般用来处理根骨骼动画
-    #     """
-    #     global ctrl_loc_list
-    #     if ctrl_list is None:
-    #         ctrl_list = pc.selected()
-    #     sel_list = ctrl_list
-    #     ctrl_loc_list = []
-    #     ctrl_con_list = []
-    #     for ctrl in sel_list:
-    #         ctrl_loc = pc.spaceLocator(n=f"{ctrl}_loc")
-    #         ctrl_loc_list.append(ctrl_loc)
-    #         ctrl_cons = pc.parentConstraint(ctrl, ctrl_loc, mo=False)
-    #         ctrl_con_list.append(ctrl_cons)
-    #     pc.bakeResults(
-    #         ctrl_loc_list,
-    #         simulation=True,
-    #         t=(pc.env.getMinTime(), pc.env.getMaxTime()),
-    #         sampleBy=1,
-    #     )
-    #     pc.delete(ctrl_con_list)
-    #     for i, ctrl in enumerate(sel_list):
-    #         pc.parentConstraint(ctrl_loc_list[i], ctrl, mo=True)
+    @QtCore.Slot()
+    def on_pelvis_obj_btn(self):
+        select_obj = pm.selected()
+        if not select_obj:
+            pm.warning("Please select pelvis obj")
+        obj_name = select_obj[0].name()
+        self.pelvis_obj_line.setText(obj_name)
 
-    # def bake_pined_anim(self,ctrl_list=None):
-    #     """烘焙控制器动画，并删除空间定位器"""
-    #     pc.bakeResults(
-    #         ctrl_list,
-    #         simulation=True,
-    #         t=(pc.env.getMinTime(), pc.env.getMaxTime()),
-    #         sampleBy=1,
-    #     )
-    #     pc.delete(ctrl_loc_list)
+    @QtCore.Slot()
+    def on_ik_ctrls_list(self):
+        self.ik_ctrls_list.clear()
+        select_obj = pm.selected()
+        if not select_obj:
+            pm.warning("Please select pelvis obj")
+        obj_name_List = [obj.name() for obj in select_obj]
+        self.ik_ctrls_list.addItems(obj_name_List)
 
-    # def Inplace_to_RootMotion(self,root_ctrl, pelvis_ctrl, ik_ctrl_list=None):
-    #     """
-    #     在maya中转换原地动画为根动画.
+    @QtCore.Slot()
+    def on_inplace_to_rootmotion_btn(self):
+        root_ctrl = nt.Transform(self.root_obj_line.text())
+        pelvis_ctrl = nt.Transform(self.pelvis_obj_line.text())
+        tx = self.tx_checkBox.isChecked()
+        ty = self.ty_checkBox.isChecked()
+        tz = self.tz_checkBox.isChecked()
+        rx = self.rx_checkBox.isChecked()
+        ry = self.ry_checkBox.isChecked()
+        rz = self.rz_checkBox.isChecked()
+        ik_ctrl_list = [
+            pm.PyNode(self.ik_ctrls_list.item(i).text())
+            for i in range(self.ik_ctrls_list.count())
+            if self.ik_ctrls_list.item(i) is not None
+        ]
+        Inplace_to_RootMotion(
+            root_ctrl, pelvis_ctrl, tx, ty, tz, rx, ry, rz, ik_ctrl_list
+        )
 
-    #     Args:
-    #                     root_name (str): 根骨骼名称.
-    #                     pelvis_name (str): 胯骨骼名称
-
-    #     Raises:
-    #                     ValueError: 如果对象不存在.
-    #     """
-    #     # 验证输入参数
-    #     if not pc.objExists(root_ctrl):
-    #         raise ValueError(f"Root bone '{root_ctrl}' does not exist in the scene.")
-    #     if not pc.objExists(pelvis_ctrl):
-    #         raise ValueError(f"Pelvis bone '{pelvis_ctrl}' does not exist in the scene.")
-
-    #     # 获取动画时间范围
-    #     firstFrame = math.floor(pc.findKeyframe(pelvis_ctrl, which="first"))
-    #     lastFrame = math.ceil(pc.findKeyframe(pelvis_ctrl, which="last"))
-    #     pc.currentTime(firstFrame)
-    #     # 用唯一的名称创建定位器
-    #     loc_root = pc.spaceLocator(name="loc_root")
-    #     loc_pelvis = pc.spaceLocator(name="loc_pelvis")
-
-    #     try:
-    #         # 控制器约束定位器
-    #         loc_root_constr = pc.parentConstraint(root_ctrl, loc_root)
-    #         loc_pelvis_constr = pc.parentConstraint(pelvis_ctrl, loc_pelvis)
-
-    #         # 烘焙定位器动画
-    #         pc.bakeResults(
-    #             loc_root, loc_pelvis, time=(firstFrame, lastFrame), sparseAnimCurveBake=True
-    #         )
-
-    #         # 删除约束节点
-    #         pc.delete(loc_root_constr, loc_pelvis_constr)
-    #         # 钉住pelvis控制器和IK控制器
-    #         pin_ctrl_anim([pelvis_ctrl] + (ik_ctrl_list or []))
-
-    #         # 胯定位器分别用点约束和方向约束约束根定位器
-    #         loc_point_contr = pc.pointConstraint(loc_pelvis, loc_root, maintainOffset=True)
-    #         loc_orient_contr = pc.orientConstraint(
-    #             loc_pelvis, loc_root, maintainOffset=True
-    #         )
-
-    #         # 烘焙动画
-    #         pc.bakeResults(
-    #             loc_root,
-    #             time=(firstFrame, lastFrame),
-    #             sparseAnimCurveBake=True,
-    #             minimizeRotation=True,
-    #         )
-    #         # 删除约束节点
-    #         pc.delete(loc_point_contr, loc_orient_contr)
-
-    #         # 执行欧拉过滤器防止跳变
-    #         pc.filterCurve(loc_root, filter="euler")
-    #         # 根据根动画所需属性修改跟定位器动画
-    #         if not root_motion_tx:
-    #             loc_root.translateX.disconnect()
-    #             pc.setKeyframe(loc_root.translateX)
-    #         if not root_motion_ty:
-    #             loc_root.translateY.disconnect()
-    #             pc.setKeyframe(loc_root.translateY)
-    #         if not root_motion_tz:
-    #             loc_root.translateZ.disconnect()
-    #             pc.setKeyframe(loc_root.translateZ)
-    #         if not root_motion_rx:
-    #             loc_root.rotateX.disconnect()
-    #             pc.setKeyframe(loc_root.rotateX)
-    #         if not root_motion_ry:
-    #             loc_root.rotateY.disconnect()
-    #             pc.setKeyframe(loc_root.rotateY)
-    #         if not root_motion_rz:
-    #             loc_root.rotateZ.disconnect()
-    #             pc.setKeyframe(loc_root.rotateZ)
-
-    #         # 定位器约束骨骼
-    #         jnt_root_constr = pc.parentConstraint(loc_root, root_ctrl)
-
-    #         # 烘焙最终动画到骨骼
-    #         pc.bakeResults(
-    #             root_ctrl,
-    #             time=(firstFrame, lastFrame),
-    #             sparseAnimCurveBake=True,
-    #         )
-    #         # 删除约束节点
-    #         pc.delete(jnt_root_constr)
-    #         bake_pined_anim([pelvis_ctrl] + (ik_ctrl_list or []))
-    #         # 执行欧拉过滤器
-    #         pc.filterCurve(root_ctrl, filter="euler")
-    #     finally:
-    #         # 清理定位器
-    #         pc.delete([obj for obj in [loc_root, loc_pelvis] if pc.objExists(obj)])
-
-    # def RootMotion_to_Inplace(self,root_name, pelvis_name, ik_ctrl_list=None):
-    #     # 验证输入参数
-    #     if not pc.objExists(root_name):
-    #         raise ValueError(f"Root bone '{root_name}' does not exist in the scene.")
-    #     if not pc.objExists(pelvis_name):
-    #         raise ValueError(f"Pelvis bone '{pelvis_name}' does not exist in the scene.")
-    #     # 获取动画时间范围
-    #     firstFrame = math.floor(pc.findKeyframe(pelvis_name, which="first"))
-    #     lastFrame = math.ceil(pc.findKeyframe(pelvis_name, which="last"))
-    #     pc.currentTime(firstFrame)
-    #     # 用唯一的名称创建定位器
-    #     locPelvis = pc.spaceLocator(name="locPelvis")
-    #     locLFoot = pc.spaceLocator(name="locLFoot")
-    #     locRFoot = pc.spaceLocator(name=g"locRFoot")
-    #     # 控制器约束定位器
-    #     pelvis_constr = pc.parentConstraint(pelvis_name, locPelvis)
-    #     foot_l_constr = pc.parentConstraint(foot_l_name, locLFoot)
-    #     foot_r_constr = pc.parentConstraint(foot_r_name, locRFoot)
-    #     # 烘焙定位器动画
-    #     pc.bakeResults(locPelvis, locLFoot, locRFoot, time=(firstFrame, lastFrame))
-    #     pc.delete(pelvis_constr, foot_l_constr, foot_r_constr)
-    #     # 定位器约束控制器
-    #     pelvis_constr = pc.parentConstraint(locPelvis, root_name)
-    #     foot_l_constr = pc.parentConstraint(locLFoot, foot_l_name)
-    #     foot_r_constr = pc.parentConstraint(locRFoot, foot_r_name)
-    #     # 列出需要断开连接的根骨骼属性
-    #     Attrs = [
-    #         f"{root_name}.tx",
-    #         f"{root_name}.ty",
-    #         f"{root_name}.tz",
-    #         f"{root_name}.rx",
-    #         f"{root_name}.ry",
-    #         f"{root_name}.rz",
-    #     ]
-    #     # 断开连接并设置为0
-    #     for attr in Attrs:
-    #         attr.disconnect()
-    #         attr.set(0)
-    #         pc.setKeyframe(attr)
-    #     # 烘焙动画到控制器
-    #     pc.bakeResults(pelvis_name, foot_l_name, foot_r_name, time=(firstFrame, lastFrame))
-    #     # 清理场景
-    #     pc.delete(
-    #         pelvis_constr, foot_l_constr, foot_r_constr, locPelvis, locLFoot, locRFoot
-    #     )
+    @QtCore.Slot()
+    def on_rootmotion_to_inplace_btn(self):
+        root_obj = nt.Transform(self.root_obj_line.text())
+        pelvis_obj = nt.Transform(self.pelvis_obj_line.text())
+        ik_ctrl_list = [
+            pm.PyNode(self.ik_ctrls_list.item(i).text())
+            for i in range(self.ik_ctrls_list.count())
+            if self.ik_ctrls_list.item(i) is not None
+        ]
+        RootMotion_to_Inplace(root_obj, pelvis_obj, ik_ctrl_list)
 
     def closeEvent(self, event):
         """关闭窗口时清空实例"""
