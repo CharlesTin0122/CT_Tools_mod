@@ -1,4 +1,3 @@
-from PySide2.QtGui import QCloseEvent
 from Qt import QtCore, QtWidgets
 import pymel.core as pm
 import pymel.core.nodetypes as nt
