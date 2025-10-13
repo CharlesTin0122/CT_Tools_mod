@@ -8,7 +8,6 @@
 @Desc    :   绑定常用函数
 """
 
-from typing import List, Optional
 import pymel.core as pm
 import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
@@ -307,10 +306,15 @@ def create_export_joints(source_jnts=None, namespace="exp"):
     exp_jnt_list = []
     for jnt in source_jnts:
         pm.select(clear=True)
-        exp_jnt = pm.joint(name=f"{namespace}:{jnt.name()}")
-        pm.matchTransform(exp_jnt, jnt, position=True, rotation=True, scale=True)
+        exp_jnt = pm.joint(name=f"{namespace}:{jnt}")
+        # 对齐变换，冻结变换
+        pm.matchTransform(exp_jnt, jnt, position=True, rotation=True, scale=False)
         pm.makeIdentity(exp_jnt, apply=True)
-        matrix_constraint(jnt, exp_jnt)
+        # 使用矩阵约束位移和旋转，缩放采用属性直连的方式，因为导出骨骼生成后还要进行骨骼父子连接，会导致缩放混乱
+        matrix_constraint(
+            jnt, exp_jnt, translate=True, rotate=True, scale=False, maintainOffset=True
+        )
+        jnt.scale.connect(exp_jnt.scale)
         exp_jnt_list.append(exp_jnt)
     return exp_jnt_list
 

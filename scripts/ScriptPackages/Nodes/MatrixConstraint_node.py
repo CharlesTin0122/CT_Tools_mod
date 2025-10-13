@@ -1,230 +1,213 @@
-# -*- coding: utf-8 -*-
 import maya.api.OpenMaya as om
 import math
 
 
 def maya_useNewAPI():
+    """Maya Python API 2.0 requirement"""
     pass
 
 
 class MatrixConstraintNode(om.MPxNode):
-    """矩阵约束节点：支持Quaternion旋转混合，避免旋转污染缩放。"""
+    """A simplified matrix constraint node using only core attributes."""
 
     kNodeName = "matrixConstraint"
-    kNodeId = om.MTypeId(0x0012CDEA)  # 随便选个未使用的ID（避免冲突可自行修改）
+    kNodeId = om.MTypeId(0x87010)  # Unique ID for this node (change for production)
 
-    # --- 属性声明 ---
-    inputMatrix = None
-    inputWeight = None
-    offsetMatrix = None
-    maintainOffset = None
-    normalizeWeight = None
+    # -----------------------------
+    # Attributes
+    # -----------------------------
+    aDriverMatrix = None
+    aDrivenParentInverseMatrix = None
 
-    outputMatrix = None
-    outputTranslate = None
-    outputRotate = None
-    outputScale = None
+    aOutputMatrix = None
 
-    @staticmethod
-    def creator():
-        return MatrixConstraintNode()
+    aTranslate = None
+    aTranslateX = None
+    aTranslateY = None
+    aTranslateZ = None
 
-    @staticmethod
-    def initialize():
-        mAttr = om.MFnMatrixAttribute()
-        nAttr = om.MFnNumericAttribute()
+    aRotate = None
+    aRotateX = None
+    aRotateY = None
+    aRotateZ = None
 
-        # 多个输入矩阵
-        MatrixConstraintNode.inputMatrix = mAttr.create(
-            "inputMatrix", "inMat", om.MFnMatrixAttribute.kDouble
-        )
-        mAttr.array = True
-        mAttr.usesArrayDataBuilder = True
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.inputMatrix)
+    aScale = None
+    aScaleX = None
+    aScaleY = None
+    aScaleZ = None
 
-        # 权重
-        MatrixConstraintNode.inputWeight = nAttr.create(
-            "inputWeight", "inW", om.MFnNumericData.kFloat, 1.0
-        )
-        nAttr.array = True
-        nAttr.usesArrayDataBuilder = True
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.inputWeight)
+    aShear = None
+    aShearX = None
+    aShearY = None
+    aShearZ = None
 
-        # 偏移矩阵
-        MatrixConstraintNode.offsetMatrix = mAttr.create(
-            "offsetMatrix", "offMat", om.MFnMatrixAttribute.kDouble
-        )
-        mAttr.array = True
-        mAttr.usesArrayDataBuilder = True
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.offsetMatrix)
-
-        # 保持偏移
-        MatrixConstraintNode.maintainOffset = nAttr.create(
-            "maintainOffset", "moff", om.MFnNumericData.kBoolean, True
-        )
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.maintainOffset)
-
-        # 权重归一化
-        MatrixConstraintNode.normalizeWeight = nAttr.create(
-            "normalizeWeight", "norm", om.MFnNumericData.kBoolean, True
-        )
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.normalizeWeight)
-
-        # 输出
-        MatrixConstraintNode.outputMatrix = mAttr.create(
-            "outputMatrix", "outMat", om.MFnMatrixAttribute.kDouble
-        )
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.outputMatrix)
-
-        MatrixConstraintNode.outputTranslate = nAttr.createPoint(
-            "outputTranslate", "outT"
-        )
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.outputTranslate)
-
-        MatrixConstraintNode.outputRotate = nAttr.createPoint(
-            "outputRotate", "outR"
-        )  # 欧拉角 XYZ
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.outputRotate)
-
-        MatrixConstraintNode.outputScale = nAttr.createPoint("outputScale", "outS")
-        MatrixConstraintNode.addAttribute(MatrixConstraintNode.outputScale)
-
-        # 属性影响关系
-        for src in [
-            MatrixConstraintNode.inputMatrix,
-            MatrixConstraintNode.inputWeight,
-            MatrixConstraintNode.offsetMatrix,
-            MatrixConstraintNode.maintainOffset,
-            MatrixConstraintNode.normalizeWeight,
-        ]:
-            MatrixConstraintNode.attributeAffects(
-                src, MatrixConstraintNode.outputMatrix
-            )
-            MatrixConstraintNode.attributeAffects(
-                src, MatrixConstraintNode.outputTranslate
-            )
-            MatrixConstraintNode.attributeAffects(
-                src, MatrixConstraintNode.outputRotate
-            )
-            MatrixConstraintNode.attributeAffects(src, MatrixConstraintNode.outputScale)
-
-    def compute(self, plug, dataBlock):
+    # -----------------------------
+    # Compute
+    # -----------------------------
+    def compute(self, plug, data_block):
+        """Main compute function."""
         if plug not in (
-            MatrixConstraintNode.outputMatrix,
-            MatrixConstraintNode.outputTranslate,
-            MatrixConstraintNode.outputRotate,
-            MatrixConstraintNode.outputScale,
+            self.aOutputMatrix,
+            self.aTranslate,
+            self.aRotate,
+            self.aScale,
+            self.aShear,
         ):
             return
 
-        in_mats = om.MArrayDataHandle(
-            dataBlock.inputArrayValue(MatrixConstraintNode.inputMatrix)
+        # --- Get Inputs ---
+        driver_matrix = data_block.inputValue(self.aDriverMatrix).asMatrix()
+        parent_inverse = data_block.inputValue(
+            self.aDrivenParentInverseMatrix
+        ).asMatrix()
+
+        # --- Compute Output ---
+        result_matrix = driver_matrix * parent_inverse
+        result_tfm = om.MTransformationMatrix(result_matrix)
+
+        # --- Set outputMatrix ---
+        out_matrix_handle = data_block.outputValue(self.aOutputMatrix)
+        out_matrix_handle.setMMatrix(result_matrix)
+        data_block.setClean(self.aOutputMatrix)
+
+        # --- Decompose and output components ---
+        translation = result_tfm.translation(om.MSpace.kWorld)
+        euler_rot = result_tfm.rotation(asQuaternion=False)
+        scale = result_tfm.scale(om.MSpace.kWorld)
+        shear = result_tfm.shear(om.MSpace.kWorld)
+
+        # Translate
+        t_handle = data_block.outputValue(self.aTranslate)
+        t_handle.set3Double(*translation)
+        data_block.setClean(self.aTranslate)
+
+        # Rotate (Euler)
+        r_handle = data_block.outputValue(self.aRotate)
+        r_handle.set3Double(euler_rot.x, euler_rot.y, euler_rot.z)
+        data_block.setClean(self.aRotate)
+
+        # Scale
+        s_handle = data_block.outputValue(self.aScale)
+        s_handle.set3Double(*scale)
+        data_block.setClean(self.aScale)
+
+        # Shear
+        sh_handle = data_block.outputValue(self.aShear)
+        sh_handle.set3Double(*shear)
+        data_block.setClean(self.aShear)
+
+    # -----------------------------
+    # Initialization
+    # -----------------------------
+    @classmethod
+    def initialize(cls):
+        nAttr = om.MFnNumericAttribute()
+        mAttr = om.MFnMatrixAttribute()
+        uAttr = om.MFnUnitAttribute()
+
+        # Input matrices
+        cls.aDriverMatrix = mAttr.create(
+            "driverMatrix", "drvMat", om.MFnMatrixAttribute.kDouble
         )
-        in_weights = om.MArrayDataHandle(
-            dataBlock.inputArrayValue(MatrixConstraintNode.inputWeight)
+        mAttr.writable = True
+        mAttr.readable = False
+        cls.addAttribute(cls.aDriverMatrix)
+
+        cls.aDrivenParentInverseMatrix = mAttr.create(
+            "drivenParentInverseMatrix", "drvInvMat", om.MFnMatrixAttribute.kDouble
         )
-        in_offsets = om.MArrayDataHandle(
-            dataBlock.inputArrayValue(MatrixConstraintNode.offsetMatrix)
+        mAttr.writable = True
+        mAttr.readable = False
+        cls.addAttribute(cls.aDrivenParentInverseMatrix)
+
+        # Output matrix
+        cls.aOutputMatrix = mAttr.create(
+            "outputMatrix", "outMat", om.MFnMatrixAttribute.kDouble
         )
+        mAttr.writable = False
+        mAttr.readable = True
+        cls.addAttribute(cls.aOutputMatrix)
 
-        normalize = dataBlock.inputValue(MatrixConstraintNode.normalizeWeight).asBool()
-
-        matrices = []
-        weights = []
-        offsets = []
-
-        # 收集输入数据
-        while not in_mats.isDone():
-            mat = om.MMatrix(in_mats.inputValue().asMatrix())
-            matrices.append(mat)
-            in_mats.next()
-
-        while not in_weights.isDone():
-            weights.append(in_weights.inputValue().asFloat())
-            in_weights.next()
-
-        while not in_offsets.isDone():
-            offsets.append(om.MMatrix(in_offsets.inputValue().asMatrix()))
-            in_offsets.next()
-
-        count = len(matrices)
-        if count == 0:
-            return
-
-        if normalize:
-            w_sum = sum(weights) or 1.0
-            weights = [w / w_sum for w in weights]
-
-        # --- 平移、旋转、缩放分量 ---
-        total_trans = om.MVector()
-        total_scale = om.MVector()
-        total_quat = om.MQuaternion(0, 0, 0, 0)
-
-        for i, mat in enumerate(matrices):
-            w = weights[i] if i < len(weights) else 1.0
-            offset = offsets[i] if i < len(offsets) else om.MMatrix.kIdentity
-
-            final_mat = mat * offset
-
-            m_trans = om.MTransformationMatrix(final_mat)
-            t = m_trans.translation(om.MSpace.kWorld)
-            s = m_trans.scale(om.MSpace.kWorld)
-            q = m_trans.rotation(asQuaternion=True)
-
-            total_trans += t * w
-            total_scale += om.MVector(s[0] * w, s[1] * w, s[2] * w)
-
-            # 四元数累加（加权平均）
-            if total_quat.isEquivalent(om.MQuaternion(0, 0, 0, 0)):
-                total_quat = q * w
-            else:
-                total_quat = om.MQuaternion.slerp(total_quat, q, w)
-
-        # --- 组合输出矩阵 ---
-        out_trans = total_trans
-        out_scale = (total_scale.x, total_scale.y, total_scale.z)
-        out_rot_euler = total_quat.asEulerRotation()
-
-        out_mtx = om.MTransformationMatrix()
-        out_mtx.setTranslation(out_trans, om.MSpace.kWorld)
-        out_mtx.setRotation(out_rot_euler)
-        out_mtx.setScale(out_scale, om.MSpace.kWorld)
-
-        # 输出设置
-        dataBlock.outputValue(MatrixConstraintNode.outputMatrix).setMMatrix(
-            out_mtx.asMatrix()
+        # --- Output decomposed components ---
+        # Translate
+        cls.aTranslateX = nAttr.create("translateX", "tx", om.MFnNumericData.kDouble)
+        cls.aTranslateY = nAttr.create("translateY", "ty", om.MFnNumericData.kDouble)
+        cls.aTranslateZ = nAttr.create("translateZ", "tz", om.MFnNumericData.kDouble)
+        cls.aTranslate = nAttr.create(
+            "translate", "t", cls.aTranslateX, cls.aTranslateY, cls.aTranslateZ
         )
-        dataBlock.outputValue(MatrixConstraintNode.outputTranslate).set3Float(
-            out_trans.x, out_trans.y, out_trans.z
+        nAttr.writable = False
+        nAttr.readable = True
+        cls.addAttribute(cls.aTranslate)
+
+        # Rotate
+        cls.aRotateX = uAttr.create("rotateX", "rx", om.MFnUnitAttribute.kAngle)
+        cls.aRotateY = uAttr.create("rotateY", "ry", om.MFnUnitAttribute.kAngle)
+        cls.aRotateZ = uAttr.create("rotateZ", "rz", om.MFnUnitAttribute.kAngle)
+        cls.aRotate = nAttr.create(
+            "rotate", "r", cls.aRotateX, cls.aRotateY, cls.aRotateZ
         )
-        dataBlock.outputValue(MatrixConstraintNode.outputRotate).set3Float(
-            math.degrees(out_rot_euler.x),
-            math.degrees(out_rot_euler.y),
-            math.degrees(out_rot_euler.z),
-        )
-        dataBlock.outputValue(MatrixConstraintNode.outputScale).set3Float(
-            out_scale[0], out_scale[1], out_scale[2]
-        )
-        dataBlock.setClean(plug)
+        nAttr.writable = False
+        nAttr.readable = True
+        cls.addAttribute(cls.aRotate)
+
+        # Scale
+        cls.aScaleX = nAttr.create("scaleX", "sx", om.MFnNumericData.kDouble, 1.0)
+        cls.aScaleY = nAttr.create("scaleY", "sy", om.MFnNumericData.kDouble, 1.0)
+        cls.aScaleZ = nAttr.create("scaleZ", "sz", om.MFnNumericData.kDouble, 1.0)
+        cls.aScale = nAttr.create("scale", "s", cls.aScaleX, cls.aScaleY, cls.aScaleZ)
+        nAttr.writable = False
+        nAttr.readable = True
+        cls.addAttribute(cls.aScale)
+
+        # Shear
+        cls.aShearX = nAttr.create("shearX", "shx", om.MFnNumericData.kDouble, 0.0)
+        cls.aShearY = nAttr.create("shearY", "shy", om.MFnNumericData.kDouble, 0.0)
+        cls.aShearZ = nAttr.create("shearZ", "shz", om.MFnNumericData.kDouble, 0.0)
+        cls.aShear = nAttr.create("shear", "sh", cls.aShearX, cls.aShearY, cls.aShearZ)
+        nAttr.writable = False
+        nAttr.readable = True
+        cls.addAttribute(cls.aShear)
+
+        # --- Attribute Affects ---
+        for input_attr in (cls.aDriverMatrix, cls.aDrivenParentInverseMatrix):
+            for output_attr in (
+                cls.aOutputMatrix,
+                cls.aTranslate,
+                cls.aRotate,
+                cls.aScale,
+                cls.aShear,
+            ):
+                cls.attributeAffects(input_attr, output_attr)
+
+    # -----------------------------
+    # Node type definition
+    # -----------------------------
+    @classmethod
+    def creator(cls):
+        return MatrixConstraintNode()
 
 
-# --- 注册与卸载 ---
+# -----------------------------
+# Plugin registration
+# -----------------------------
 def initializePlugin(plugin):
-    pluginFn = om.MFnPlugin(plugin, "Charles Tian", "1.0", "Any")
+    plugin_fn = om.MFnPlugin(plugin, "Charles Tian", "1.0.0")
     try:
-        pluginFn.registerNode(
+        plugin_fn.registerNode(
             MatrixConstraintNode.kNodeName,
             MatrixConstraintNode.kNodeId,
             MatrixConstraintNode.creator,
             MatrixConstraintNode.initialize,
+            om.MPxNode.kDependNode,
         )
     except Exception as e:
-        om.MGlobal.displayError("Failed to register node: " + str(e))
+        om.MGlobal.displayError(f"Failed to register node: {e}")
 
 
 def uninitializePlugin(plugin):
-    pluginFn = om.MFnPlugin(plugin)
+    plugin_fn = om.MFnPlugin(plugin)
     try:
-        pluginFn.deregisterNode(MatrixConstraintNode.kNodeId)
+        plugin_fn.deregisterNode(MatrixConstraintNode.kNodeId)
     except Exception as e:
-        om.MGlobal.displayError("Failed to deregister node: " + str(e))
+        om.MGlobal.displayError(f"Failed to deregister node: {e}")
