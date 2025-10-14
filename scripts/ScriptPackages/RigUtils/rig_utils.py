@@ -180,10 +180,34 @@ def addSupportJoint(oSel=None, select=True, *args):
             pm.sets(defSet, add=jnt)
 
         else:
-            pm.displayWarning(
-                "Support Joint can't be added to: %s. Because "
-                "is not blend joint" % x.name()
-            )
+            # 获取所有子骨骼
+            children = [
+                item
+                for item in pm.selected()[0].listRelatives(
+                    allDescendents=True, type="joint"
+                )
+            ]
+            # 获取子骨骼数量
+            i = 0
+            for obj in children:
+                if "_Support_" in obj.name():
+                    i += 1
+            # 获取修形骨骼唯一命名
+            name = f"{x.name()}_Support_{i}"
+            # 创建骨骼，添加列表，设置属性
+            jnt = pm.createNode("joint", n=name, p=x)
+            jnt_list.append(jnt)
+            jnt.attr("radius").set(1.5)
+            jnt.attr("overrideEnabled").set(1)
+            jnt.attr("overrideColor").set(17)
+            try:
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            except pm.MayaNodeError:
+                pm.sets(n="rig_deformers_grp")
+                defSet = pm.PyNode("rig_deformers_grp")
+
+            pm.sets(defSet, add=jnt)
 
     if jnt_list and select:
         pm.select(jnt_list)

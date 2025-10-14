@@ -1,6 +1,7 @@
 from pathlib import Path
 import importlib
 import traceback
+from Qt import QtCore
 from Qt.QtWidgets import (
     QApplication,
     QDialog,
@@ -28,6 +29,8 @@ class TcToolsUI(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Tc Tools V1.0")
         self.setGeometry(300, 300, 350, 600)
+        # 窗口在关闭时自动彻底销毁对象
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.init_ui()
 
     def init_ui(self):
@@ -158,6 +161,11 @@ class TcToolsUI(QDialog):
         else:
             cls._ui_instance.raise_()
             cls._ui_instance.activateWindow()
+
+    def closeEvent(self, event):
+        """关闭窗口时清空实例"""
+        TcToolsUI._ui_instance = None
+        super().closeEvent(event)
 
 
 # --- 程序入口 ---
