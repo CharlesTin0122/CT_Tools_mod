@@ -13,6 +13,7 @@ import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
 
 
+# Rig Utilities
 def addOffsetGroups(objs=None, *args):
     """为选中对象添加偏移组，偏移组会提取对象的所有变换，使对象属性归零
 
@@ -257,6 +258,17 @@ def offsetParentMatrix_to_transform(objs=None):
         obj.offsetParentMatrix.set(dt.Matrix())
 
 
+def zero_joint_orient(jnts=None):
+    """将骨骼的jointOrient属性置零"""
+    if jnts is None:
+        jnts = pm.selected()
+    for jnt in jnts:
+        if not isinstance(jnt, nt.Joint):
+            pm.warning(f"{jnt} is not joint ,do not have jointOrient attribute.")
+            continue
+        jnt.jointOrient.set(dt.Vector())
+
+
 def matrix_constraint(
     source_obj=None,
     target_obj=None,
@@ -343,7 +355,7 @@ def create_export_joints(source_jnts=None, namespace="exp"):
     return exp_jnt_list
 
 
-# Rig Utilities
+# Rig Function
 def match_bind_jnt_to_ikfk_jnt(
     limb_setting_ctrl: nt.Transform,
     bind_jnt_list: list[nt.Joint],
