@@ -5,7 +5,7 @@
 @Author  :   Charles Tian
 @Version :   1.0
 @Contact :   tianchao0533@gmail.com
-@Desc    :   当前文件作用
+@Desc    :   根动画工具UI
 """
 
 from Qt import QtCore, QtWidgets

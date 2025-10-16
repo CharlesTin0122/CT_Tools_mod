@@ -1,3 +1,13 @@
+# -*- encoding: utf-8 -*-
+"""
+@File    :   space_switch_tool_ui.py
+@Time    :   2025/10/16 10:55:28
+@Author  :   Charles Tian
+@Version :   1.0
+@Contact :   tianchao0533@gmail.com
+@Desc    :   空间切换插件UI
+"""
+
 from Qt import QtCore, QtWidgets
 import pymel.core as pm
 from spaceSwitchTool.space_switch_tool_matrix import (

@@ -13,6 +13,14 @@ import maya.api.OpenMaya as om
 
 # Internal Utility Functions
 def _getNodeName(uuid):
+    """
+    Returns the name of the node with the given UUID
+
+    :param uuid: UUID of the node
+    :type uuid: str
+    :return: Name of the node or None if the node does not exist
+    :rtype: str or None
+    """
     nodeName = cmds.ls(uuid, uuid=True)
     if nodeName:
         return nodeName[0]
@@ -21,6 +29,14 @@ def _getNodeName(uuid):
 
 # Functions to be imported
 def trailingNumbers(nodes, _):
+    """
+    Returns a list of nodes with names that end with a digit.
+
+    :param nodes: UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes with names that end with a digit
+    :rtype: tuple of (str, list of str)
+    """
     trailingNumbers = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -30,6 +46,14 @@ def trailingNumbers(nodes, _):
 
 
 def duplicatedNames(nodes, _):
+    """
+    Returns a list of nodes with names that have duplicates.
+
+    :param nodes: UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes with names that have duplicates
+    :rtype: tuple of (str, list of str)
+    """
     nodesByShortName = defaultdict(list)
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -43,6 +67,14 @@ def duplicatedNames(nodes, _):
 
 
 def namespaces(nodes, _):
+    """
+    Returns a list of nodes with names that contain a namespace (i.e. have a ":" in their name)
+
+    :param nodes: UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes with names that contain a namespace
+    :rtype: tuple of (str, list of str)
+    """
     namespaces = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -52,6 +84,14 @@ def namespaces(nodes, _):
 
 
 def shapeNames(nodes, _):
+    """
+    Returns a list of nodes with names that do not end with "Shape" when split by "|"
+
+    :param nodes: UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes with names that do not end with "Shape" when split by "|"
+    :rtype: tuple of (str, list of str)
+    """
     shapeNames = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -66,6 +106,14 @@ def shapeNames(nodes, _):
 
 
 def triangles(_, SLMesh):
+    """
+    Returns a list of polygon IDs that are triangles (i.e. have 3 edges)
+
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a list of UUIDs of polygons that are triangles
+    :rtype: tuple of (str, list of str)
+    """
     triangles = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -82,6 +130,15 @@ def triangles(_, SLMesh):
 
 
 def ngons(_, SLMesh):
+    """
+    Returns a dictionary of ngons (polygons with more than 4 edges)
+
+    :param _:
+    :param SLMesh:
+    :return: A dictionary of ngons (polygons with more than 4 edges)
+        "polygon": {}, [UUID] : [... ngonId ]
+    :rtype: dict
+    """
     ngons = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -98,6 +155,15 @@ def ngons(_, SLMesh):
 
 
 def hardEdges(_, SLMesh):
+    """
+    Returns a dictionary of hard edges (edges that are not smooth and not on the boundary)
+
+    :param _:
+    :param SLMesh:
+    :return: A dictionary of hard edges (edges that are not smooth and not on the boundary)
+        "edge": {}, [UUID] : [... hardEdgeId ]
+    :rtype: dict
+    """
     hardEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -113,6 +179,15 @@ def hardEdges(_, SLMesh):
 
 
 def lamina(_, SLMesh):
+    """
+    Returns a dictionary of lamina faces (faces that are marked as lamina)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of polygons that are lamina to their corresponding polygon IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     lamina = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -129,6 +204,15 @@ def lamina(_, SLMesh):
 
 
 def zeroAreaFaces(_, SLMesh):
+    """
+    Returns a dictionary of zero area faces (faces that have an area of 0 or less)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of polygons that are zero area to their respective polygon IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     zeroAreaFaces = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -145,6 +229,15 @@ def zeroAreaFaces(_, SLMesh):
 
 
 def zeroLengthEdges(_, SLMesh):
+    """
+    Returns a dictionary of zero length edges (edges that have a length of 0 or less)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("edge") and a dictionary of UUIDs of edges that are zero length to their respective edge IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     zeroLengthEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -160,6 +253,16 @@ def zeroLengthEdges(_, SLMesh):
 
 
 def selfPenetratingUVs(transformNodes, _):
+    """
+    Returns a dictionary of self penetrating UVs (UVs that are overlapping with each other)
+
+    :param transformNodes: A list of transform nodes to check
+    :type transformNodes: list of str
+    :param _: Unused parameter
+    :type _: None
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of polygons that are self penetrating to their respective polygon IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     selfPenetratingUVs = defaultdict(list)
     for node in transformNodes:
         nodeName = _getNodeName(node)
@@ -178,6 +281,15 @@ def selfPenetratingUVs(transformNodes, _):
 
 
 def noneManifoldEdges(_, SLMesh):
+    """
+    Returns a dictionary of none manifold edges (edges that are connected to more than 2 faces)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("edge") and a dictionary of UUIDs of edges that are none manifold to their respective edge IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     noneManifoldEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -193,6 +305,15 @@ def noneManifoldEdges(_, SLMesh):
 
 
 def openEdges(_, SLMesh):
+    """
+    Returns a dictionary of open edges (edges that are connected to less than 2 faces)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("edge") and a dictionary of UUIDs of edges that are open to their respective edge IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     openEdges = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -208,6 +329,15 @@ def openEdges(_, SLMesh):
 
 
 def poles(_, SLMesh):
+    """
+    Returns a dictionary of poles (vertices that are connected to more than 5 edges)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("vertex") and a dictionary of UUIDs of vertices that are poles to their respective vertex IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     poles = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -223,6 +353,15 @@ def poles(_, SLMesh):
 
 
 def starlike(_, SLMesh):
+    """
+    Returns a dictionary of non-starlike polygons (polygons that are not starlike)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of polygons that are not starlike to their respective polygon IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     noneStarlike = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -238,6 +377,15 @@ def starlike(_, SLMesh):
 
 
 def missingUVs(_, SLMesh):
+    """
+    Returns a dictionary of faces that are missing UVs
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of faces that are missing UVs to their respective face IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     missingUVs = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -253,6 +401,15 @@ def missingUVs(_, SLMesh):
 
 
 def uvRange(_, SLMesh):
+    """
+    Returns a dictionary of UVs that are outside of the range 0-10 for U and V coordinates
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("uv") and a dictionary of UUIDs of UVs that are outside of the range to their respective UV IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     uvRange = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -268,6 +425,15 @@ def uvRange(_, SLMesh):
 
 
 def onBorder(_, SLMesh):
+    """
+    Returns a dictionary of UVs that are on the border of the UV range (i.e. U or V coordinates are integers)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("uv") and a dictionary of UUIDs of UVs that are on the border to their respective UV IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     onBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -283,6 +449,15 @@ def onBorder(_, SLMesh):
 
 
 def crossBorder(_, SLMesh):
+    """
+    Returns a dictionary of polygons that have UVs that cross the border of the UV range (i.e. U or V coordinates are integers)
+
+    :param _:
+    :param SLMesh: UUID of the mesh to check
+    :type SLMesh: str
+    :return: A tuple containing a string indicating the type of nodes ("polygon") and a dictionary of UUIDs of polygons that have UVs that cross the border to their respective polygon IDs
+    :rtype: tuple of (str, dict of (str, list of int))
+    """
     crossBorder = defaultdict(list)
     selIt = om.MItSelectionList(SLMesh)
     while not selIt.isDone():
@@ -316,6 +491,14 @@ def crossBorder(_, SLMesh):
 
 
 def unfrozenTransforms(nodes, _):
+    """
+    Returns a list of nodes that have unfrozen transforms
+
+    :param nodes: A list of UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes that have unfrozen transforms
+    :rtype: tuple of (str, list of str)
+    """
     unfrozenTransforms = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -332,6 +515,14 @@ def unfrozenTransforms(nodes, _):
 
 
 def layers(nodes, _):
+    """
+    Returns a list of nodes that are connected to a display layer
+
+    :param nodes: A list of UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes that are connected to a display layer
+    :rtype: tuple of (str, list of str)
+    """
     layers = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -342,6 +533,14 @@ def layers(nodes, _):
 
 
 def shaders(transformNodes, _):
+    """
+    Returns a list of nodes that have shaders other than the initialShadingGroup
+
+    :param transformNodes: A list of UUIDs of transform nodes to check
+    :type transformNodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes that have shaders other than the initialShadingGroup
+    :rtype: tuple of (str, list of str)
+    """
     shaders = []
     for node in transformNodes:
         nodeName = _getNodeName(node)
@@ -354,6 +553,15 @@ def shaders(transformNodes, _):
 
 
 def history(nodes, _):
+    """
+    Returns a list of nodes that have a history larger than 1
+    (i.e. they have been modified by a tool or a script)
+
+    :param nodes: A list of UUIDs of nodes to check
+    :type nodes: list of str
+    :return: A tuple containing a string indicating the type of nodes ("nodes") and a list of UUIDs of nodes that have a history larger than 1
+    :rtype: tuple of (str, list of str)
+    """
     history = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -366,6 +574,19 @@ def history(nodes, _):
 
 
 def uncenteredPivots(nodes, _):
+    """
+    Checks if the pivot of the given nodes are not centered (i.e. not at [0, 0, 0]).
+
+    Parameters
+    ----------
+    nodes : list
+        A list of node IDs to check.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the name of the node type and a list of node IDs with uncentered pivots.
+    """
     uncenteredPivots = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -375,6 +596,14 @@ def uncenteredPivots(nodes, _):
 
 
 def emptyGroups(nodes, _):
+    """
+    Finds all empty groups in a given list of nodes.
+
+    :param nodes: A list of nodes to check.
+    :type nodes: list
+    :return: A tuple containing the type of the result and a list of nodes that are empty groups.
+    :rtype: tuple
+    """
     emptyGroups = []
     for node in nodes:
         nodeName = _getNodeName(node)
@@ -384,6 +613,14 @@ def emptyGroups(nodes, _):
 
 
 def parentGeometry(transformNodes, _):
+    """
+    Finds all transform nodes that have a parent node that has a mesh node as a child.
+
+    :param transformNodes: A list of transform nodes.
+    :type transformNodes: list
+    :return: A tuple containing the type of the result and a list of transform nodes that have a parent node with a mesh node as a child.
+    :rtype: tuple
+    """
     parentGeometry = []
     for node in transformNodes:
         nodeName = _getNodeName(node)

@@ -1,3 +1,13 @@
+# -*- encoding: utf-8 -*-
+"""
+@File    :   space_switch_tool_matrix.py
+@Time    :   2025/10/16 10:54:05
+@Author  :   Charles Tian
+@Version :   1.0
+@Contact :   tianchao0533@gmail.com
+@Desc    :   使用矩阵节点实现空间切换，性能更好
+"""
+
 import pymel.core as pm
 import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
