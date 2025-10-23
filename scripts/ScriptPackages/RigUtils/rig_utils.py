@@ -143,7 +143,7 @@ def addSupportJoint(oSel=None, select=True, *args):
     jnt_list = []
     # 遍历所选对象
     for x in oSel:
-        if x.name().split("_")[0] == "blend":
+        if "blend" in x.name():
             # 获取所有子骨骼
             children = [
                 item
