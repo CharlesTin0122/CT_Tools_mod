@@ -11,6 +11,7 @@
 import pymel.core as pm
 import pymel.core.nodetypes as nt
 import pymel.core.datatypes as dt
+from connectTwistSwing.connect_twist_swing_logic import connect_twist_swing
 
 
 # Rig Utilities
@@ -74,45 +75,35 @@ def addBlendedJoint(
     # 用于储存混合骨骼
     jnt_list = []
     # 遍历所选骨骼
-    for x in base_joint:
+    for jnt in base_joint:
         # 获取骨骼父对象和混合骨骼名称
-        if isinstance(x, pm.nodetypes.Joint):
-            parent = x.getParent()
+        if isinstance(jnt, pm.nodetypes.Joint):
+            parent = jnt.getParent()
             if name:
-                bname = "blend_" + name
+                bname = f"{name}_blend"
             else:
-                bname = "blend_" + x.name()
+                bname = f"{jnt.name()}_blend"
             # 创建骨骼，添加到列表，设置半径，设置父对象
-            jnt = pm.createNode("joint", n=bname, p=x)
-            jnt_list.append(jnt)
-            jnt.attr("radius").set(1.5)
-            pm.parent(jnt, parent)
-            # 创建pairBlend节点
-            o_node = pm.createNode("pairBlend")
-            # 设置节点旋转差值为四元数（Quaternion）
-            o_node.attr("rotInterpolation").set(1)
-            # 设置节点混合权重
-            pm.setAttr(o_node + ".weight", blend)
-            # 链接属性
-            pm.connectAttr(x + ".translate", o_node + ".inTranslate1")
-            pm.connectAttr(x + ".translate", o_node + ".inTranslate2")
-            pm.connectAttr(x + ".rotate", o_node + ".inRotate1")
-
-            pm.connectAttr(o_node + ".outRotateX", jnt + ".rotateX")
-            pm.connectAttr(o_node + ".outRotateY", jnt + ".rotateY")
-            pm.connectAttr(o_node + ".outRotateZ", jnt + ".rotateZ")
-
-            pm.connectAttr(o_node + ".outTranslateX", jnt + ".translateX")
-            pm.connectAttr(o_node + ".outTranslateY", jnt + ".translateY")
-            pm.connectAttr(o_node + ".outTranslateZ", jnt + ".translateZ")
-
-            pm.connectAttr(x + ".scale", jnt + ".scale")
+            blend_jnt = pm.createNode("joint", n=bname, p=jnt)
+            jnt_list.append(blend_jnt)
+            blend_jnt.attr("radius").set(1.5)
+            pm.parent(blend_jnt, parent)
+            # 连接变换
+            connect_twist_swing(
+                driver=jnt,
+                driven=blend_jnt,
+                twist=0.5,
+                swing=0.5,
+                twist_axis="X",
+            )
+            jnt.translate.connect(blend_jnt.translate)
+            jnt.scale.connect(blend_jnt.scale)
             # 设置混合骨骼颜色为黄色
-            jnt.attr("overrideEnabled").set(1)
-            jnt.attr("overrideColor").set(17)
+            blend_jnt.attr("overrideEnabled").set(1)
+            blend_jnt.attr("overrideColor").set(17)
             # 设置混合骨骼 分段缩放补偿
-            jnt.attr("segmentScaleCompensate").set(compScale)
-
+            blend_jnt.attr("segmentScaleCompensate").set(compScale)
+            # 设置set以方便选择管理
             try:
                 defSet = pm.PyNode("rig_deformers_grp")
 
@@ -120,11 +111,10 @@ def addBlendedJoint(
                 pm.sets(n="rig_deformers_grp")
                 defSet = pm.PyNode("rig_deformers_grp")
 
-            pm.sets(defSet, add=jnt)
+            pm.sets(defSet, add=blend_jnt)
         else:
             pm.displayWarning(
-                "Blended Joint can't be added to: %s. Because "
-                "is not ot type Joint" % x.name()
+                f"Blended Joint can't be added to: {jnt.name()}. Because is not type Joint"
             )
 
     if jnt_list and select:
@@ -164,7 +154,7 @@ def addSupportJoint(oSel=None, select=True, *args):
             # 获取子骨骼数量
             i = len(children)
             # 获取修形骨骼唯一命名
-            name = x.name().replace("blend", "blendSupport_%s" % str(i))
+            name = x.name().replace("blend", f"support_{i}")
             # 创建骨骼，添加列表，设置属性
             jnt = pm.createNode("joint", n=name, p=x)
             jnt_list.append(jnt)
@@ -180,6 +170,7 @@ def addSupportJoint(oSel=None, select=True, *args):
 
             pm.sets(defSet, add=jnt)
 
+        # 不需要blend_joint的情况
         else:
             # 获取所有子骨骼
             children = [
@@ -191,10 +182,10 @@ def addSupportJoint(oSel=None, select=True, *args):
             # 获取子骨骼数量
             i = 0
             for obj in children:
-                if "_Support_" in obj.name():
+                if "_support" in obj.name():
                     i += 1
             # 获取修形骨骼唯一命名
-            name = f"{x.name()}_Support_{i}"
+            name = f"{x.name()}_support_{i}"
             # 创建骨骼，添加列表，设置属性
             jnt = pm.createNode("joint", n=name, p=x)
             jnt_list.append(jnt)

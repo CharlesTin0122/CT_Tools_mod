@@ -113,24 +113,16 @@ def connect_twist_swing(
 
         slerp_matrix_node.outputMatrix.connect(driven_offset_matrix_node.matrixIn[0])
         driven_offset_matrix_node.matrixIn[1].set(driven_local_matrix)
-        # ## 直连属性
-        # final_rotation_node = pm.createNode(
-        #     "decomposeMatrix", name=f"{driven}_final_rotation"
-        # )
-        # driven_offset_matrix_node.matrixSum.connect(final_rotation_node.inputMatrix)
-        # final_rotation_node.outputRotate.connect(driven.rotate)
+        ## 直连属性
+        final_rotation_node = pm.createNode(
+            "decomposeMatrix", name=f"{driven}_final_rotation"
+        )
+        driven_offset_matrix_node.matrixSum.connect(final_rotation_node.inputMatrix)
+        final_rotation_node.outputRotate.connect(driven.rotate)
+
         ## 连接父对象偏移矩阵
-        driven_offset_matrix_node.matrixSum.connect(driven.offsetParentMatrix)
-        ### 目标对象属性置零
-        for attr in [
-            f"{attr}{axis}" for attr in ["translate", "rotate"] for axis in "XYZ"
-        ]:
-            is_locked = driven.attr(attr).isLocked()
-            if is_locked:
-                driven.attr(attr).setLocked(False)
-            driven.attr(attr).set(0)
-            if is_locked:
-                driven.attr(attr).setLocked(True)
+        # driven_offset_matrix_node.matrixSum.connect(driven.offsetParentMatrix)
+
         ## 目标对象是骨骼，则jointOrient置零
         if driven_is_joint:
             for attr in [f"jointOrient{axis}" for axis in "XYZ"]:
