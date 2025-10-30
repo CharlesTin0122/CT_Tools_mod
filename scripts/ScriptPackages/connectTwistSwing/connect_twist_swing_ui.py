@@ -23,14 +23,14 @@ class ConnectTwistSwing(QtWidgets.QDialog):
         self.lab_twist = QtWidgets.QLabel("Twist Weight: ")
         self.dsb_twist = QtWidgets.QDoubleSpinBox()
         self.dsb_twist.setFixedWidth(60)
-        self.dsb_twist.setMinimum(0.0)
+        self.dsb_twist.setMinimum(-1.0)
         self.dsb_twist.setMaximum(1.0)
         self.dsb_twist.setSingleStep(0.1)
 
         self.lab_swing = QtWidgets.QLabel("Swing Weight: ")
         self.dsb_swing = QtWidgets.QDoubleSpinBox()
         self.dsb_swing.setFixedWidth(60)
-        self.dsb_swing.setMinimum(0.0)
+        self.dsb_swing.setMinimum(-1.0)
         self.dsb_swing.setMaximum(1.0)
         self.dsb_swing.setSingleStep(0.1)
 

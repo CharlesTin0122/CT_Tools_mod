@@ -1,6 +1,5 @@
 import pymel.core as pm
 import pymel.core.nodetypes as nt
-import pymel.core.datatypes as dt
 
 
 def connect_twist_swing(
@@ -22,6 +21,7 @@ def connect_twist_swing(
             twist_axis (str): 扭转轴向 (X, Y, or Z).
         Returns:
             None
+    TODO:添加负扭转和负摆动
     """
     # 获取对象
     if not driver or not driven:
@@ -33,6 +33,7 @@ def connect_twist_swing(
     if not isinstance(driver, nt.Transform) or not isinstance(driven, nt.Transform):
         pm.error("驱动对象和目标对象必须是 Transform 类型")
 
+    driven_is_joint = False
     if isinstance(driven, nt.Joint):
         driven_is_joint = True
 
@@ -43,7 +44,7 @@ def connect_twist_swing(
                 driven.addAttr(
                     attr,
                     type=float,
-                    minValue=0,
+                    minValue=-1,
                     maxValue=1,
                     defaultValue=0,
                     keyable=True,

@@ -28,7 +28,7 @@ class SkinClusterIO(QtWidgets.QDialog):
         import_btn = QtWidgets.QPushButton("Import skin")
         import_btn.released.connect(self.import_skin)
         export_btn = QtWidgets.QPushButton("Export skin")
-        export_btn.released.connect(self.import_skin)
+        export_btn.released.connect(self.export_skin)
         main_layout.addWidget(import_btn)
         main_layout.addWidget(export_btn)
 
