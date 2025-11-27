@@ -27,12 +27,6 @@ JOINT_GROUPS = {
         "FACIAL_L_Eye",
     ],
     "瞳孔": ["FACIAL_L_Pupil"],
-    "鼻子": [
-        "FACIAL_C_Nose",
-        "FACIAL_C_NoseTip",
-        "FACIAL_L_Nostril",
-        "FACIAL_C_NoseLower",
-    ],
     "鼻梁": ["FACIAL_C_Nose"],
     "鼻尖": ["FACIAL_C_NoseTip"],
     "鼻翼": ["FACIAL_L_Nostril"],
@@ -83,7 +77,9 @@ class MhJntSelector(QtWidgets.QDialog):
         self.joint_buttons = {}
         for name, joints in JOINT_GROUPS.items():
             button = QtWidgets.QPushButton(name)
+            # 为按钮添加属性，存储对应的骨骼列表
             button.joint_list = joints
+            # 按钮尺寸策略，占用尽可能多的水平空间，垂直方向只想要一个合适的高度
             button.setSizePolicy(
                 QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
             )
@@ -246,7 +242,7 @@ class MhJntSelector(QtWidgets.QDialog):
 
             # 强制刷新视图
             pm.isolateSelect(model_panel_name, update=True)
-            print(f"✅ 在视口 '{model_panel_name}' 执行隔离显示。")
+            print(f"在视口 '{model_panel_name}' 执行隔离显示。")
 
         except Exception as e:
             pm.error(f"执行选择/隔离显示时发生错误: {e}")
