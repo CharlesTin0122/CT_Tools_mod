@@ -16,36 +16,34 @@ except ImportError:
         from shiboken import wrapInstance
 
 
-# --- 骨骼选择组数据 ---
-JOINT_GROUPS = {
-    "头骨": ["FACIAL_C_Skull"],
-    "眼球": [
-        "FACIAL_L_EyelidUpperA",
-        "FACIAL_L_EyelidUpperB",
-        "FACIAL_L_EyelidLowerA",
-        "FACIAL_L_EyelidLowerB",
-        "FACIAL_L_Eye",
-    ],
-    "瞳孔": ["FACIAL_L_Pupil"],
-    "鼻梁": ["FACIAL_C_Nose"],
-    "鼻尖": ["FACIAL_C_NoseTip"],
-    "鼻翼": ["FACIAL_L_Nostril"],
-    "鼻底": ["FACIAL_C_NoseLower"],
-    "下颌": [
-        "FACIAL_C_Jaw",
-        "FACIAL_C_LowerLipRotation",
-    ],
-    "下巴": ["FACIAL_C_Chin"],
-    "上牙": ["FACIAL_C_TeethUpper"],
-    "下牙": ["FACIAL_C_TeethLower"],
-    "舌头": ["FACIAL_C_Tongue1"],
-    "嘴部": ["FACIAL_C_MouthUpper", "FACIAL_C_MouthLower"],
-}
-
-
 class MhJntSelector(QtWidgets.QDialog):
     _ui_instance = None
     WINDOW_TITLE = "MetaHuman Joint Selector"
+    # --- 骨骼选择组数据 ---
+    JOINT_GROUPS = {
+        "头骨": ["FACIAL_C_Skull"],
+        "眼球": [
+            "FACIAL_L_EyelidUpperA",
+            "FACIAL_L_EyelidUpperB",
+            "FACIAL_L_EyelidLowerA",
+            "FACIAL_L_EyelidLowerB",
+            "FACIAL_L_Eye",
+        ],
+        "瞳孔": ["FACIAL_L_Pupil"],
+        "鼻梁": ["FACIAL_C_Nose"],
+        "鼻尖": ["FACIAL_C_NoseTip"],
+        "鼻翼": ["FACIAL_L_Nostril"],
+        "鼻底": ["FACIAL_C_NoseLower"],
+        "下颌": [
+            "FACIAL_C_Jaw",
+            "FACIAL_C_LowerLipRotation",
+        ],
+        "下巴": ["FACIAL_C_Chin"],
+        "上牙": ["FACIAL_C_TeethUpper"],
+        "下牙": ["FACIAL_C_TeethLower"],
+        "舌头": ["FACIAL_C_Tongue1"],
+        "嘴部": ["FACIAL_C_MouthUpper", "FACIAL_C_MouthLower"],
+    }
 
     def __init__(self, parent=None):
         if parent is None:
@@ -75,7 +73,7 @@ class MhJntSelector(QtWidgets.QDialog):
 
         # 2. 骨骼选择按钮区域
         self.joint_buttons = {}
-        for name, joints in JOINT_GROUPS.items():
+        for name, joints in MhJntSelector.JOINT_GROUPS.items():
             button = QtWidgets.QPushButton(name)
             # 为按钮添加属性，存储对应的骨骼列表
             button.joint_list = joints
