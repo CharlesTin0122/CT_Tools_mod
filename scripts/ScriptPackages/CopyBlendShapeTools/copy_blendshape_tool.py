@@ -163,7 +163,7 @@ class CopyBlendShapeTool:
         pc.select(target_meshes, replace=1)
         pc.select(source_mesh, toggle=1)
         wrap_node = pc.mel.performCreateWrap(False)
-        # pm.deformer(type='wrap')
+        # wrap_node = pc.cmds.CreateWrap()
         # 获取源模型混合变形信息
         bs_info_list = self.find_blendshape_info(source_mesh)
         # 通过推导式生成字典，形式为{变形名称：变形属性,...}
