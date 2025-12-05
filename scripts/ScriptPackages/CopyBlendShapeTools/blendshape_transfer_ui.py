@@ -14,7 +14,7 @@ class bs_transfer_sameTopo(QtWidgets.QWidget):
         self.source_mesh_line = QtWidgets.QLineEdit()
         self.source_mesh_btn = QtWidgets.QPushButton("<<")
 
-        self.target_mesh_label = QtWidgets.QLabel("Source Mesh: ")
+        self.target_mesh_label = QtWidgets.QLabel("Target Mesh: ")
         self.target_mesh_line = QtWidgets.QLineEdit()
         self.target_mesh_btn = QtWidgets.QPushButton("<<")
 
@@ -34,7 +34,7 @@ class bs_transfer_sameTopo(QtWidgets.QWidget):
         target_mesh_lo.addWidget(self.target_mesh_line)
         target_mesh_lo.addWidget(self.target_mesh_btn)
 
-        main_lo = QtWidgets.QHBoxLayout(self)
+        main_lo = QtWidgets.QVBoxLayout(self)
         main_lo.addLayout(source_mesh_lo)
         main_lo.addLayout(target_mesh_lo)
 
@@ -113,7 +113,7 @@ class bs_transfer_diffTopo(QtWidgets.QWidget):
         target_mesh_trans_lo.addWidget(self.target_mesh_trans_line)
         target_mesh_trans_lo.addWidget(self.target_mesh_trans_btn)
 
-        main_lo = QtWidgets.QHBoxLayout(self)
+        main_lo = QtWidgets.QVBoxLayout(self)
         main_lo.addLayout(source_mesh_lo)
         main_lo.addLayout(source_mesh_trans_lo)
         main_lo.addLayout(target_mesh_lo)
@@ -178,24 +178,15 @@ class bs_transfer(QtWidgets.QDialog):
         self.custom_widget_02 = bs_transfer_diffTopo()
         # 创建TabWidget，并将QWidget添加到Tab
         self.tab_widget = QtWidgets.QTabWidget()
-        self.tab_widget.addTab(self.custom_widget_01, "Tab 01")
-        self.tab_widget.addTab(self.custom_widget_02, "Tab 02")
-        self.tab_widget.addTab(QtWidgets.QPushButton("My Button"), "Tab 03")
-        # OK and Cancel Button
-        self.ok_btn = QtWidgets.QPushButton("OK")
-        self.cancel_btn = QtWidgets.QPushButton("Cancel")
+        self.tab_widget.addTab(self.custom_widget_01, "Same Topo")
+        self.tab_widget.addTab(self.custom_widget_02, "Diff Topo")
+        self.tab_widget.addTab(QtWidgets.QPushButton("My Button"), "Froce Transfer")
 
     def create_layouts(self):
         """创建布局"""
 
-        btn_layout = QtWidgets.QHBoxLayout()
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.ok_btn)
-        btn_layout.addWidget(self.cancel_btn)
-
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.addWidget(self.tab_widget)  # 添加 tab_widget
-        main_layout.addLayout(btn_layout)
 
     def create_connections(self):
         """创建连接"""
