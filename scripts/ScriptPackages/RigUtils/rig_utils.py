@@ -86,7 +86,7 @@ def addBlendedJoint(
             # 创建骨骼，添加到列表，设置半径，设置父对象
             blend_jnt = pm.createNode("joint", n=bname, p=jnt)
             jnt_list.append(blend_jnt)
-            blend_jnt.attr("radius").set(1.5)
+            blend_jnt.attr("radius").set(0.5)
             pm.parent(blend_jnt, parent)
             # 连接变换
             connect_twist_swing(
@@ -158,7 +158,7 @@ def addSupportJoint(oSel=None, select=True, *args):
             # 创建骨骼，添加列表，设置属性
             jnt = pm.createNode("joint", n=name, p=x)
             jnt_list.append(jnt)
-            jnt.attr("radius").set(1.5)
+            jnt.attr("radius").set(0.1)
             jnt.attr("overrideEnabled").set(1)
             jnt.attr("overrideColor").set(17)
             try:
