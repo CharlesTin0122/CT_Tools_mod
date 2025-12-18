@@ -1,4 +1,9 @@
-from Qt import QtCore, QtWidgets
+from Qt import QtWidgets
+from CopyBlendShapeTools.blendshape_transfer_logic import (
+    transfer_blendshape_targets_sameTopo,
+    transfer_blendshape_targets_diffTopo,
+)
+import pymel.core as pm
 
 
 # 自定义控件类用于填充TabWidget
@@ -19,7 +24,7 @@ class bs_transfer_sameTopo(QtWidgets.QWidget):
         self.target_mesh_btn = QtWidgets.QPushButton("<<")
 
         self.load_targets_btn = QtWidgets.QPushButton("Load Targets")
-        self.target_list = QtWidgets.QListWidget()
+        self.target_list_wgt = QtWidgets.QListWidget()
 
         self.transfer_btn = QtWidgets.QPushButton("transfer Blendshapes")
 
@@ -39,7 +44,7 @@ class bs_transfer_sameTopo(QtWidgets.QWidget):
         main_lo.addLayout(target_mesh_lo)
 
         main_lo.addWidget(self.load_targets_btn)
-        main_lo.addWidget(self.target_list)
+        main_lo.addWidget(self.target_list_wgt)
         main_lo.addWidget(self.transfer_btn)
 
     def create_connections(self):
@@ -50,16 +55,27 @@ class bs_transfer_sameTopo(QtWidgets.QWidget):
 
     # ------------------------------槽函数--------------------------------------
     def load_source_mesh(self):
-        pass
+        self.source_mesh = pm.selected()[0]
+        if self.source_mesh:
+            sel_name = self.source_mesh.name()
+            self.source_mesh_line.setText(sel_name)
 
     def load_target_mesh(self):
-        pass
+        self.target_mesh = pm.selected()[0]
+        if self.target_mesh:
+            sel_name = self.target_mesh.name()
+            self.target_mesh_line.setText(sel_name)
 
     def load_targets(self):
-        pass
+        self.target_list = pm.selected()
+        for obj in self.target_list:
+            obj_name = obj.name()
+            self.target_list_wgt.addItem(obj_name)
 
     def transfer(self):
-        pass
+        transfer_blendshape_targets_sameTopo(
+            self.source_mesh, self.target_mesh, self.target_list
+        )
 
 
 # 自定义控件类用于填充TabWidget
@@ -88,7 +104,7 @@ class bs_transfer_diffTopo(QtWidgets.QWidget):
         self.target_mesh_trans_btn = QtWidgets.QPushButton("<<")
 
         self.load_targets_btn = QtWidgets.QPushButton("Load Targets")
-        self.target_list = QtWidgets.QListWidget()
+        self.target_list_wgt = QtWidgets.QListWidget()
 
         self.transfer_btn = QtWidgets.QPushButton("transfer Blendshapes")
 
@@ -120,7 +136,7 @@ class bs_transfer_diffTopo(QtWidgets.QWidget):
         main_lo.addLayout(target_mesh_trans_lo)
 
         main_lo.addWidget(self.load_targets_btn)
-        main_lo.addWidget(self.target_list)
+        main_lo.addWidget(self.target_list_wgt)
         main_lo.addWidget(self.transfer_btn)
 
     def create_connections(self):
@@ -133,22 +149,43 @@ class bs_transfer_diffTopo(QtWidgets.QWidget):
 
     # ------------------------------槽函数--------------------------------------
     def load_source_mesh(self):
-        pass
+        self.source_mesh = pm.selected()[0]
+        if self.source_mesh:
+            sel_name = self.source_mesh.name()
+            self.source_mesh_line.setText(sel_name)
 
     def load_source_mesh_trans(self):
-        pass
+        self.source_mesh_trans = pm.selected()[0]
+        if self.source_mesh_trans:
+            sel_name = self.source_mesh_trans.name()
+            self.source_mesh_trans_line.setText(sel_name)
 
     def load_target_mesh(self):
-        pass
+        self.target_mesh = pm.selected()[0]
+        if self.target_mesh:
+            sel_name = self.target_mesh.name()
+            self.target_mesh_line.setText(sel_name)
 
     def load_target_mesh_trans(self):
-        pass
+        self.target_mesh_trans = pm.selected()[0]
+        if self.target_mesh_trans:
+            sel_name = self.target_mesh_trans.name()
+            self.target_mesh_trans_line.setText(sel_name)
 
     def load_targets(self):
-        pass
+        self.target_list = pm.selected()
+        for obj in self.target_list:
+            obj_name = obj.name()
+            self.target_list_wgt.addItem(obj_name)
 
     def transfer(self):
-        pass
+        transfer_blendshape_targets_diffTopo(
+            self.source_mesh,
+            self.source_mesh_trans,
+            self.target_mesh,
+            self.target_mesh_trans,
+            self.target_list,
+        )
 
 
 class bs_transfer(QtWidgets.QDialog):
@@ -169,7 +206,6 @@ class bs_transfer(QtWidgets.QDialog):
 
         self.create_widgets()
         self.create_layouts()
-        self.create_connections()
 
     def create_widgets(self):
         """创建控件"""
@@ -180,29 +216,13 @@ class bs_transfer(QtWidgets.QDialog):
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.addTab(self.custom_widget_01, "Same Topo")
         self.tab_widget.addTab(self.custom_widget_02, "Diff Topo")
-        self.tab_widget.addTab(QtWidgets.QPushButton("My Button"), "Froce Transfer")
+        self.tab_widget.addTab(QtWidgets.QPushButton("TODO"), "Froce Wrap")
 
     def create_layouts(self):
         """创建布局"""
 
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.addWidget(self.tab_widget)  # 添加 tab_widget
-
-    def create_connections(self):
-        """创建连接"""
-        self.tab_widget.currentChanged.connect(self.on_current_index_changed)
-
-    # 槽函数
-    @QtCore.Slot(int)
-    def on_current_index_changed(self, index):
-        """当TabWidget控件切换Tab时调用,信号传入参数为Tab的索引"""
-        print(f"Current Index: {index}")  # 打印当前选项卡索引
-
-    def keyPressEvent(self, event):
-        """重写keyPressEvent函数，在使用该工具时避免误操作maya
-        比如按下键盘“s”键导致剋帧
-        """
-        pass
 
     @staticmethod
     def maya_main_window():

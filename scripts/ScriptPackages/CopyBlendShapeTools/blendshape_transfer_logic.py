@@ -2,9 +2,6 @@ import pymel.core as pm
 import pymel.core.nodetypes as nt
 
 
-DIRPATH = r"H:\MetaHuman\blendshape_transfer\blendshapetransferfiles"
-
-
 def find_blendshape_info(source_mesh: nt.Transform | nt.Mesh) -> list:
     """用于返回给出模型的混合变形信息，包含名称和属性
 
@@ -27,21 +24,13 @@ def find_blendshape_info(source_mesh: nt.Transform | nt.Mesh) -> list:
     return bs_info_list
 
 
-def transfer_blendshape_targets(mesh_a, mesh_b):
-    pass
-
-
 def transfer_blendshape_targets_sameTopo(
-    source_mesh: nt.Transform, target_mesh: nt.Transform
+    source_mesh: nt.Transform,
+    target_mesh: nt.Transform,
+    target_list: list[nt.Transform],
 ):
-    # 模型A的变形目标组
-    target_grp_name = "grp_trgt"
     # 创建组用于接收输出的变形目标
     grp_output = pm.createNode("transform", name=f"grp_{target_mesh}")
-    # 模型A变形目标列表
-    target_list = [
-        target for target in pm.listRelatives(target_grp_name, children=True)
-    ]
     # 模型A 变形目标列表添加 模型B
     target_list.append(target_mesh)
     # 创建混合变形，并设置全中初始值，最后一个 target（mesh_b） 设置权重为 1，其他都是 0
@@ -102,15 +91,13 @@ def transfer_blendshape_targets_diffTopo(
     source_mesh_openMouth_target: nt.Transform,
     target_mesh: nt.Transform,
     target_mesh_openMouth_target: nt.Transform,
+    target_list: list[nt.Transform],
 ):
-    # 变量名
-    grp_target = "grp_trgt"
     # 创建输出组
     output_target_grp = pm.createNode("transform", n=f"grp_{target_mesh}")
-    # 获取变形目标
-    target_list = [target for target in pm.listRelatives(grp_target, children=True)]
+
     # 创建混合变形
-    bs_source_mesh = pm.blendShape(
+    pm.blendShape(
         target_list,
         source_mesh,
         name=f"bs_{source_mesh}",
@@ -127,7 +114,7 @@ def transfer_blendshape_targets_diffTopo(
     pm.mel.performCreateWrap(False)  # 不弹出窗口
     wrap_node = pm.listHistory(target_mesh_openMouth_target, type="wrap")
     # 创建原模型和source_mesh_trans的混合变形,并将权重设为1，获得中性的pose（不张嘴）
-    bs_source_trans = pm.blendShape(
+    pm.blendShape(
         source_mesh,
         source_mesh_trans,
         name="bs_source_trans",
@@ -190,22 +177,3 @@ def transfer_blendshape_targets_diffTopo(
         topologyCheck=False,
     )
     return final_blendshape
-
-
-def run_dev():
-    filepath = rf"{DIRPATH}\00_example.mb"
-    pm.openFile(filepath, force=True)
-    pm.renameFile("untitled")
-
-    mesh_a = nt.Transform("mesh_head")
-    mesh_a_trans = nt.Transform("trgt_head_xfer")
-    mesh_b = nt.Transform("mesh_arnie")
-    mesh_b_trans = nt.Transform("trgt_arnie_xfer")
-
-    transfer_blendshape_targets_diffTopo(mesh_a, mesh_a_trans, mesh_b, mesh_b_trans)
-
-    return True
-
-
-if __name__ == "__main__":
-    run_dev()
