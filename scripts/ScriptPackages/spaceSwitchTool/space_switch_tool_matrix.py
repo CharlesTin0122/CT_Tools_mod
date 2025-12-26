@@ -5,7 +5,7 @@
 @Author  :   Charles Tian
 @Version :   1.0
 @Contact :   tianchao0533@gmail.com
-@Desc    :   使用矩阵节点实现空间切换，性能更好
+@Desc    :   使用矩阵节点实现空间切换，性能更好，不能直接应用于骨骼，可能导致引擎内动画无效。
 """
 
 import pymel.core as pm
