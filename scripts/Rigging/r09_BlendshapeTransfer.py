@@ -6,7 +6,6 @@
 # @Software : PyCharm
 # Description:
 
-from CopyBlendShapeTools import copy_blendshape_tool
+from CopyBlendShapeTools import blendshape_transfer_ui as ui
 
-cbt = copy_blendshape_tool.CopyBlendShapeTool()
-cbt.create_ui()
+ui.bs_transfer.show_singleton_dialog()

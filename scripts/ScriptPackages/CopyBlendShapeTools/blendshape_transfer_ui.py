@@ -1,7 +1,9 @@
 from Qt import QtWidgets
 from CopyBlendShapeTools.blendshape_transfer_logic import (
+    find_blendshape_info,
     transfer_blendshape_targets_sameTopo,
     transfer_blendshape_targets_diffTopo,
+    copy_blendshapes,
 )
 import pymel.core as pm
 
@@ -188,6 +190,76 @@ class bs_transfer_diffTopo(QtWidgets.QWidget):
         )
 
 
+class force_wrap(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.create_widgets()
+        self.create_layouts()
+        self.create_connections()
+
+    def create_widgets(self):
+        self.source_mesh_label = QtWidgets.QLabel("Source Mesh: ")
+        self.source_mesh_line = QtWidgets.QLineEdit()
+        self.source_mesh_btn = QtWidgets.QPushButton("<<")
+
+        self.blendshapse_label = QtWidgets.QLabel("Blendshapes: ")
+        self.blendshapse_list_wgt = QtWidgets.QListWidget()
+        self.blendshapse_list_wgt.setSelectionMode(QtWidgets.QListWidget.MultiSelection)
+
+        self.load_targets_btn = QtWidgets.QPushButton("Load Targets")
+        self.target_list_wgt = QtWidgets.QListWidget()
+
+        self.transfer_btn = QtWidgets.QPushButton("Copy Blendshapes")
+
+    def create_layouts(self):
+        source_mesh_lo = QtWidgets.QHBoxLayout()
+        source_mesh_lo.addWidget(self.source_mesh_label)
+        source_mesh_lo.addWidget(self.source_mesh_line)
+        source_mesh_lo.addWidget(self.source_mesh_btn)
+
+        main_lo = QtWidgets.QVBoxLayout(self)
+        main_lo.addLayout(source_mesh_lo)
+
+        main_lo.addWidget(self.blendshapse_label)
+        main_lo.addWidget(self.blendshapse_list_wgt)
+        main_lo.addWidget(self.load_targets_btn)
+        main_lo.addWidget(self.target_list_wgt)
+        main_lo.addWidget(self.transfer_btn)
+
+    def create_connections(self):
+        self.source_mesh_btn.clicked.connect(self.load_source_mesh)
+        self.load_targets_btn.clicked.connect(self.load_targets)
+        self.transfer_btn.clicked.connect(self.transfer)
+
+    # ------------------------------槽函数--------------------------------------
+    def load_source_mesh(self):
+        self.source_mesh = pm.selected()[0]
+        if self.source_mesh:
+            sel_name = self.source_mesh.name()
+            self.source_mesh_line.setText(sel_name)
+
+            bs_info_list = find_blendshape_info(self.source_mesh)
+
+            bs_name_list = []
+            for bs_info in bs_info_list:
+                bs_name = bs_info[0]
+                bs_name_list.append(bs_name)
+
+            self.blendshapse_list_wgt.clear()
+            self.blendshapse_list_wgt.addItems(bs_name_list)
+
+    def load_targets(self):
+        self.target_list_wgt.clear()
+        self.target_list = pm.selected()
+        self.target_list_wgt.addItems([obj.name() for obj in self.target_list])
+
+    def transfer(self):
+        self.selected_blendshapes = [
+            item.text() for item in self.blendshapse_list_wgt.selectedItems()
+        ]
+        copy_blendshapes(self.source_mesh, self.target_list, self.selected_blendshapes)
+
+
 class bs_transfer(QtWidgets.QDialog):
     """工具UI类"""
 
@@ -212,11 +284,12 @@ class bs_transfer(QtWidgets.QDialog):
         # 创建自定义控件实例
         self.custom_widget_01 = bs_transfer_sameTopo()
         self.custom_widget_02 = bs_transfer_diffTopo()
+        self.custom_widget_03 = force_wrap()
         # 创建TabWidget，并将QWidget添加到Tab
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.addTab(self.custom_widget_01, "Same Topo")
         self.tab_widget.addTab(self.custom_widget_02, "Diff Topo")
-        self.tab_widget.addTab(QtWidgets.QPushButton("TODO"), "Froce Wrap")
+        self.tab_widget.addTab(self.custom_widget_03, "Froce Wrap")
 
     def create_layouts(self):
         """创建布局"""

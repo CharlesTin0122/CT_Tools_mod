@@ -2,18 +2,32 @@ import pymel.core as pm
 import pymel.core.nodetypes as nt
 
 
-def find_blendshape_info(source_mesh: nt.Transform | nt.Mesh) -> list:
+def find_blendshape_info(source_mesh: nt.Transform) -> list:
     """用于返回给出模型的混合变形信息，包含名称和属性
 
     Args:
-        source_mesh (pc.nodetypes.Transform): 给出的源模型
+        source_mesh (pm.nodetypes.Transform): 给出的源模型
 
     Returns:
         list: 混合变形信息列表
     """
-
+    if not isinstance(source_mesh, nt.Transform):
+        pm.inViewMessage(
+            amg="Input object is not a valid source mesh...",
+            alpha=0.5,
+            dragKill=True,
+            pos="midCenterTop",
+            fade=True,
+        )
     blendshapes = pm.listHistory(source_mesh, type="blendShape")
-
+    if not blendshapes:
+        pm.inViewMessage(
+            amg="No blendshapes found in the source mesh...",
+            alpha=0.5,
+            dragKill=True,
+            pos="midCenterTop",
+            fade=True,
+        )
     # 通过blendshape.listAliases()，获取混合变形信息。
     bs_info_list = []
     for blendshape in blendshapes:
@@ -177,3 +191,77 @@ def transfer_blendshape_targets_diffTopo(
         topologyCheck=False,
     )
     return final_blendshape
+
+
+def copy_blendshapes(
+    source_mesh: nt.Transform,
+    target_meshes: list[nt.Transform],
+    select_blendshapes: list[str],
+):
+    """
+    将指定的混合变形从源模型复制到多个目标模型。
+
+    Args:
+        source_mesh: 源模型
+        target_meshes: 目标模型
+        select_blendshapes: 指定的混合变形
+    Returns:
+        None
+    """
+    if not source_mesh:
+        pm.inViewMessage(
+            amg="Please input source mesh...",
+            alpha=0.5,
+            dragKill=True,
+            pos="midCenterTop",
+            fade=True,
+        )
+        return
+    # 选中模型并创建包裹变形器
+    if not target_meshes:
+        pm.inViewMessage(
+            amg="Please input target meshes...",
+            alpha=0.5,
+            dragKill=True,
+            pos="midCenterTop",
+            fade=True,
+        )
+        return
+    if not select_blendshapes:
+        pm.inViewMessage(
+            amg="Please select blendshapes to copy from...",
+            alpha=0.5,
+            dragKill=True,
+            pos="midCenterTop",
+            fade=True,
+        )
+        return
+    pm.select(target_meshes, replace=1)
+    pm.select(source_mesh, toggle=1)
+    wrap_node = pm.mel.performCreateWrap(False)
+    # wrap_node = pm.cmds.CreateWrap()
+    # 获取源模型混合变形信息
+    bs_info_list = find_blendshape_info(source_mesh)
+    # 通过推导式生成字典，形式为{变形名称：变形属性,...}
+    bs_info_dict = {bs_info[0]: bs_info[1] for bs_info in bs_info_list}
+    # 遍历目标模型生成混合变形所需的目标模型，并进行混合变形
+    for target_mesh in target_meshes:  # 遍历目标模型
+        bs_group = []
+        for bs_name in select_blendshapes:  # 遍历指定的混合变形
+            bs_info_dict[bs_name].set(1)  # 将该混合变形属性设置为1
+            # 通过在变形状态下复制模型的方法，生成混合变形所需的目标模型，并将其添加到bs_group中
+            bs_mesh = pm.duplicate(target_mesh)[0]
+            bs_mesh.rename(bs_name)
+            bs_group.append(bs_mesh)
+            # 将该混合变形属性设置为0，返回未变形状态。
+            bs_info_dict[bs_name].set(0)
+        pm.blendShape(bs_group, target_mesh)  # 创建混合变形
+        # 重命名生成的混合变形所需的目标模型,并将其打组隐藏
+        for mesh in bs_group:
+            pm.rename(mesh, newname=f"{target_mesh}_{mesh}")
+        target_grp = pm.group(bs_group, name=f"{target_mesh}_target")
+        pm.hide(target_grp)
+    # 删除包裹变形器
+    for mesh in target_meshes:
+        wrap_node = pm.listHistory(mesh, type="wrap")
+        pm.delete(wrap_node)
