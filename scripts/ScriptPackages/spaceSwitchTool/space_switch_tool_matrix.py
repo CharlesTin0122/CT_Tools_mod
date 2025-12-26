@@ -127,7 +127,11 @@ def seamless_space_switch(
     with pm.UndoChunk():
         # 在切换前，记录下控制器当前的世界矩阵
         original_world_matrix = target_node.getMatrix(worldSpace=True)
-
+        pre_frame = pm.currentTime() - 1
+        pm.setKeyframe(target_node, time=pre_frame, attribute="translate")
+        pm.setKeyframe(target_node, time=pre_frame, attribute="rotate")
+        pm.setKeyframe(target_node, time=pre_frame, attribute="scale")
+        pm.setKeyframe(target_node, time=pre_frame, attribute=switch_attribute)
         # 执行切换：设置枚举属性为新的值,这会导致目标对象发生跳变
         try:
             target_node.attr(switch_attribute).set(new_space_index)
