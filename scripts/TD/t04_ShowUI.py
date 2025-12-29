@@ -1,3 +1,3 @@
-import tcTools_mian_ui as ui
+import scripts.tcTools_main_ui as ui
 
 ui.TcToolsUI.show_ui()
