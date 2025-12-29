@@ -2,7 +2,7 @@ import pymel.core as pm
 import pymel.core.datatypes as dt
 
 
-def set_polevector_position(jnt1, jnt2, jnt3, pv_ctrl, ctrl_distance=50.0):
+def calculate_polevector(jnt1, jnt2, jnt3, pv_ctrl, ctrl_distance=50.0):
     """
     利用向量投影计算极向量控制器的位置。
 
@@ -43,11 +43,11 @@ def set_polevector_position(jnt1, jnt2, jnt3, pv_ctrl, ctrl_distance=50.0):
     return final_pos
 
 
-if __name__ == "__main__":
+def set_polevector_position():
     sel = pm.selected()
     if len(sel) == 4:
         # 解包选择：前三个为骨骼，最后一个为控制器
         j1, j2, j3, ctrl = sel
-        set_polevector_position(j1, j2, j3, ctrl, ctrl_distance=30.0)
+        calculate_polevector(j1, j2, j3, ctrl, ctrl_distance=50.0)
     else:
         pm.error("请依次选择三个骨骼（父->子）和一个控制器对象。")

@@ -1,11 +1,22 @@
 from Qt import QtCore, QtWidgets
 from shiboken2 import wrapInstance
 import maya.OpenMayaUI as omui
+from RigUtils.rig_utils import (
+    addOffsetGroups,
+    addBlendedJoint,
+    addSupportJoint,
+    transform_to_offsetParentMatrix,
+    offsetParentMatrix_to_transform,
+    matrix_constraint,
+    create_export_joints,
+)
+from RigUtils.polevector_position import set_polevector_position
+from RigUtils.joint_on_vertexes_or_objs import create_joints
 
 
 class RigToolKit(QtWidgets.QDialog):
     _ui_instance = None
-    WINDOW_TITLE = "Template"
+    WINDOW_TITLE = "RigToolKit"
 
     def __init__(self, parent=None):
         if parent is None:
@@ -61,11 +72,19 @@ class RigToolKit(QtWidgets.QDialog):
         main_layout.addWidget(self.create_export_joints)
 
     def create_connections(self):
-        pass
+        self.add_offset_group_btn.clicked.connect(addOffsetGroups)
+        self.matrix_constraint_btn.clicked.connect(matrix_constraint)
 
-    @QtCore.Slot()
-    def template_slot(self):
-        pass
+        self.joint_on_vertexes_or_objs_btn.clicked.connect(create_joints)
+        self.polevector_position.clicked.connect(set_polevector_position)
+
+        self.add_blended_joint_btn.clicked.connect(addBlendedJoint)
+        self.add_support_joint_btn.clicked.connect(addSupportJoint)
+
+        self.transform_to_OPM_btn.clicked.connect(transform_to_offsetParentMatrix)
+        self.OPM_to_transform_btn.clicked.connect(offsetParentMatrix_to_transform)
+
+        self.create_export_joints.clicked.connect(create_export_joints)
 
     def closeEvent(self, event):
         """关闭窗口时清空实例"""
