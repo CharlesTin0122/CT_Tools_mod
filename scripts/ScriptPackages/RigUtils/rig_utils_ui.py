@@ -34,18 +34,43 @@ class RigToolKit(QtWidgets.QDialog):
 
     def create_widgets(self):
         self.add_offset_group_btn = QtWidgets.QPushButton("Add Offset Group")
+        self.add_offset_group_btn.setToolTip("为对象添加偏移组来归零对象变换")
         self.matrix_constraint_btn = QtWidgets.QPushButton("Matrix Constraint")
+        self.matrix_constraint_btn.setToolTip(
+            "先选择驱动对象，后选择被驱动对象，添加矩阵约束"
+        )
 
         self.joint_on_vertexes_or_objs_btn = QtWidgets.QPushButton("joint On Objs")
+        self.joint_on_vertexes_or_objs_btn.setToolTip(
+            "在选中的对象中心位置创建骨骼，如果选中的对象是模型顶点，则在所有选中顶点中心位置创建骨骼"
+        )
         self.polevector_position = QtWidgets.QPushButton("Calculate PoleVector")
+        self.polevector_position.setToolTip(
+            "选中三个骨骼和一个控制器，计算并设置极向量控制器位置"
+        )
 
         self.add_blended_joint_btn = QtWidgets.QPushButton("Add Blended Joint")
+        self.add_blended_joint_btn.setToolTip(
+            "为当前选中骨骼创建混合骨骼，混合骨骼的旋转是选中骨骼的一半"
+        )
         self.add_support_joint_btn = QtWidgets.QPushButton("Add Support Joint")
+        self.add_support_joint_btn.setToolTip(
+            "为当前选中骨骼创建支持骨骼，支持骨骼常用于RBF修形"
+        )
 
         self.transform_to_OPM_btn = QtWidgets.QPushButton("Transform To OPM")
+        self.transform_to_OPM_btn.setToolTip(
+            "将选中对象的变换置零并将数值转移到偏移父矩阵（OffsetParentMatrix）"
+        )
         self.OPM_to_transform_btn = QtWidgets.QPushButton("OPM To Transform")
+        self.OPM_to_transform_btn.setToolTip(
+            "将选中对象的偏移父矩阵（OffsetParentMatrix）置零并将数值转移到变换"
+        )
 
         self.create_export_joints = QtWidgets.QPushButton("Create Export Joints")
+        self.create_export_joints.setToolTip(
+            "为当前选中的骨骼创建导出骨骼，导出骨骼位移旋转被原骨骼矩阵约束"
+        )
 
     def create_layout(self):
         layout_1 = QtWidgets.QHBoxLayout()
