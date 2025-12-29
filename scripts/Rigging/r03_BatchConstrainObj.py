@@ -5,7 +5,6 @@
 # @Time     :  2023/5/26 13:09
 # @Software : PyCharm
 # Description:
-from batchConstrNearestObj import batch_constrain_obj as bco
+from batchConstrNearestObj import batch_constraint_objs as tool
 
-ui = bco.BatchConstrNearestObj()
-ui.create_ui()
+tool.run()

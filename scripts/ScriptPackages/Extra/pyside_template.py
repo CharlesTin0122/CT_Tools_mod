@@ -1,17 +1,16 @@
 from Qt import QtCore, QtWidgets
-from shiboken2 import wrapInstance
-import maya.OpenMayaUI as omui
 
 
 class TemplateDialog(QtWidgets.QDialog):
     _ui_instance = None
-    WINDOW_TITLE = "Template"
+    WINDOW_TITLE = "Template Window"
+    OBJECT_NAME = "myTemplateDialog"  # 建议给对象命名，方便在 Maya 中追踪
 
     def __init__(self, parent=None):
         if parent is None:
             parent = self.get_maya_main_window()
         super().__init__(parent)
-
+        self.setObjectName(self.OBJECT_NAME)
         self.setWindowTitle(TemplateDialog.WINDOW_TITLE)
         self.setMinimumSize(300, 120)
         # 窗口在关闭时自动彻底销毁对象
@@ -41,25 +40,25 @@ class TemplateDialog(QtWidgets.QDialog):
 
     @staticmethod
     def get_maya_main_window():
-        """返回 Maya 主窗口的 PySide 实例"""
-        ptr = omui.MQtUtil.mainWindow()
-        if ptr is not None:
-            return wrapInstance(int(ptr), QtWidgets.QMainWindow)
+        # 通常 Maya 启动后，其主窗口就是 topLevelWidgets 中的 QMainWindow
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if widget.objectName() == "MayaWindow":
+                return widget
         return None
 
     @classmethod
     def show_ui(cls):
         """单例显示 UI"""
-        # 如果没有单例或者实例不显示，则创建并显示实例
-        if cls._ui_instance is None or not cls._ui_instance.isVisible():
-            cls._ui_instance = TemplateDialog()
-            cls._ui_instance.show()
-        # 其他情况实例抬起并激活
-        else:
-            cls._ui_instance.raise_()
-            cls._ui_instance.activateWindow()
+        # 如果旧窗口已存在，先关闭它
+        if cls._ui_instance is not None:
+            cls._ui_instance.close()
+            cls._ui_instance.deleteLater()
+
+        cls._ui_instance = TemplateDialog()
+        cls._ui_instance.show()
+        return cls._ui_instance
 
 
 # 执行代码
 def run():
-    TemplateDialog.show_ui()
+    return TemplateDialog.show_ui()
