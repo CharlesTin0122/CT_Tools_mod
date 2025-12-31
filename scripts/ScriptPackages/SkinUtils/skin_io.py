@@ -25,20 +25,20 @@ class SkinClusterIO(QtWidgets.QDialog):
         self.setMinimumSize(200, 80)
 
         main_layout = QtWidgets.QVBoxLayout(self)
+
         import_btn = QtWidgets.QPushButton("Import skin")
         import_btn.released.connect(self.import_skin)
         export_btn = QtWidgets.QPushButton("Export skin")
         export_btn.released.connect(self.export_skin)
+
         main_layout.addWidget(import_btn)
         main_layout.addWidget(export_btn)
 
     @staticmethod
     def maya_main_window():
-        app = QtWidgets.QApplication.instance()
-        if app:
-            for widget in app.topLevelWidgets():
-                if widget.objectName() == "MayaWindow":
-                    return widget
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if widget.objectName() == "MayaWindow":
+                return widget
         return None
 
     @classmethod

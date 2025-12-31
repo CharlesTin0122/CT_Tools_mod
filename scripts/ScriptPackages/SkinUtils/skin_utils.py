@@ -2,7 +2,7 @@ import pymel.core as pm
 import pymel.core.nodetypes as nt
 
 
-def move_skin_weights(jnt_a: nt.Joint, jnt_b: nt.Joint) -> None:
+def switch_skin_weights(jnt_a: nt.Joint, jnt_b: nt.Joint) -> None:
     """
     两个骨骼之间互换蒙皮权重
     Args:

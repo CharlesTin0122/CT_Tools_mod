@@ -79,20 +79,14 @@ class ConnectTwistSwing(QtWidgets.QDialog):
         twist_axis = self.comB_axis.currentData()
         try:
             connect_twist_swing(driver, driven, twist_weight, swing_weight, twist_axis)
-            QtWidgets.QMessageBox.information(self, "成功", "Twist 和 Swing 连接已完成")
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "错误", f"连接失败: {str(e)}")
+            print(e)
 
     @staticmethod
     def get_maya_main_window():
         """通过 QApplication 获取 Maya 主窗口的 PySide 实例"""
-        # 用于获取当前运行的 maya QApplication 实例
-        app = QtWidgets.QApplication.instance()
-        # 如果当前没有运行的实例，返回None
-        if not app:
-            return None
         # app.topLevelWidgets() 返回当前 QApplication 管理的所有顶层窗口（没有父窗口）列表
-        for widget in app.topLevelWidgets():
+        for widget in QtWidgets.QApplication.topLevelWidgets():
             # 如果窗口的 Qt 对象名称为"MayaWindow"，返回这个窗口实例
             if widget.objectName() == "MayaWindow":
                 return widget

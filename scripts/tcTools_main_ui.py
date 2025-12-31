@@ -139,12 +139,10 @@ class TcToolsUI(QDialog):
 
     @staticmethod
     def maya_main_window():
-        """获取maya主界面的pyside实例"""
-        app = QApplication.instance()
-        if app:
-            for widget in app.topLevelWidgets():
-                if widget.objectName() == "MayaWindow":
-                    return widget
+        # 通常 Maya 启动后，其主窗口就是 topLevelWidgets 中的 QMainWindow
+        for widget in QApplication.topLevelWidgets():
+            if widget.objectName() == "MayaWindow":
+                return widget
         return None
 
     # 创建单例窗口

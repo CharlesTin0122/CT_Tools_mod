@@ -78,7 +78,6 @@ def addBlendedJoint(
     for jnt in base_joint:
         # 获取骨骼父对象和混合骨骼名称
         if isinstance(jnt, pm.nodetypes.Joint):
-            parent = jnt.getParent()
             if name:
                 bname = f"{name}_blend"
             else:
@@ -87,16 +86,16 @@ def addBlendedJoint(
             blend_jnt = pm.createNode("joint", n=bname, p=jnt)
             jnt_list.append(blend_jnt)
             blend_jnt.attr("radius").set(0.5)
-            pm.parent(blend_jnt, parent)
+            pm.matchTransform(blend_jnt, base_joint)
+            pm.parent(blend_jnt, base_joint)
             # 连接变换
             connect_twist_swing(
                 driver=jnt,
                 driven=blend_jnt,
-                twist=0.5,
-                swing=0.5,
+                twist=blend * -1,
+                swing=blend * -1,
                 twist_axis="X",
             )
-            jnt.translate.connect(blend_jnt.translate)
             jnt.scale.connect(blend_jnt.scale)
             # 设置混合骨骼颜色为黄色
             blend_jnt.attr("overrideEnabled").set(1)
